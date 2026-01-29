@@ -295,21 +295,22 @@ body.hero-zoom-complete #page1-5-entry{
 
 .bottom-page1{
     position: absolute;
-    bottom: 8%;
+    top: 16%;
+    bottom: auto;
     height: auto;
-    width: 50vw;
-    left: 10%;
+    width: min(520px, 45vw);
+    left: 8%;
     display: flex;
     flex-direction: column;
     gap: 2vw;
-    z-index: 10;
+    z-index: 40;
     opacity: 1;
     transition: opacity 0.5s ease;
 }
 
 .bottom-page1>h1{
     font-family: a;
-    font-size: 5vw;
+    font-size: clamp(40px, 6vw, 80px);
     font-weight: 100;
     line-height: 1.1;
     color: #fff;
@@ -319,7 +320,7 @@ body.hero-zoom-complete #page1-5-entry{
 .bottom-page1-inner{
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     font-family: a;
     gap: 2vw;
     width: 100%;
@@ -350,6 +351,49 @@ body.hero-zoom-complete #page1-5-entry{
     line-height: 1.5;
     flex: 1;
     margin-right: 2vw;
+}
+
+@media (max-width: 768px){
+    #page1>nav{
+        padding: 0 16px;
+        height: 12vh;
+    }
+
+    #page1>nav>img{
+        width: 40vw;
+        max-width: 180px;
+        margin-top: 0;
+    }
+
+    .bottom-page1{
+        top: 20%;
+        left: 6%;
+        width: 88vw;
+        gap: 6vw;
+    }
+
+    .bottom-page1>h1{
+        font-size: clamp(32px, 9vw, 56px);
+    }
+
+    .bottom-page1-inner{
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4vw;
+    }
+
+    .bottom-page1-inner>button{
+        font-size: 14px;
+        padding: 12px 24px;
+    }
+}
+
+@media (max-width: 480px){
+    .bottom-page1{
+        top: 18%;
+        left: 5%;
+        width: 90vw;
+    }
 }
 
 #page2{
