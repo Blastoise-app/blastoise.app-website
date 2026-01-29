@@ -77,7 +77,6 @@ function initBlastoiseHero() {
   const heroBlastoise = document.querySelector("#hero-blastoise");
   const entryPortal = document.querySelector("#entry-portal");
   const page1 = document.querySelector("#page1");
-  const enterShellOverlay = document.querySelector("#enter-shell-overlay");
   
   if (!heroBlastoise || !entryPortal || !page1) {
     console.warn("Blastoise hero elements not found", {heroBlastoise, entryPortal, page1});
@@ -225,13 +224,6 @@ function initBlastoiseHero() {
       console.error("Missing elements for animation setup!");
       return;
     }
-
-    if (enterShellOverlay) {
-      gsap.set(enterShellOverlay, {
-        opacity: 0,
-        visibility: "hidden"
-      });
-    }
     
     // Recalculate transform origin to ensure it's accurate
     const transformOrigin = calculateImageRelativeTransformOrigin();
@@ -240,7 +232,6 @@ function initBlastoiseHero() {
     
     // Calculate section height for normalized scroll progress
     const sectionHeight = page1.offsetHeight;
-    let enterShellOverlayRevealed = false;
     
     // Create zoom animation using normalized scroll progress (0 → 1)
     // Animation progresses based on how far user scrolls through the section
@@ -260,15 +251,6 @@ function initBlastoiseHero() {
           if (!heroZoomComplete && self.progress >= 1) {
             heroZoomComplete = true;
             document.body.classList.add("hero-zoom-complete");
-            if (enterShellOverlay && !enterShellOverlayRevealed) {
-              enterShellOverlayRevealed = true;
-              gsap.to(enterShellOverlay, {
-                opacity: 1,
-                visibility: "visible",
-                duration: 1,
-                ease: "power2.out"
-              });
-            }
             if (locoScroll) {
               locoScroll.update();
             }
@@ -292,7 +274,7 @@ function initBlastoiseHero() {
     ScrollTrigger.create({
       trigger: page1,
       start: "top top",
-      end: () => `+=${sectionHeight * 2}`,
+      end: () => `+=${sectionHeight * 2}`, // Match zoom animation end distance (normalized to section)
       pin: true,
       pinSpacing: true,
       scroller: scroller,
@@ -421,13 +403,83 @@ function initEntrySections() {
   
   console.log(`Found ${entrySections.length} entry sections`);
   
-  const blastoiseAppSection = entrySections[0];
-  const otherSections = Array.from(entrySections).slice(1);
-
+  // Find "Enter the Shell" section (first one)
+  const enterShellSection = entrySections[0];
+  const blastoiseAppSection = entrySections[1];
+  const otherSections = Array.from(entrySections).slice(2);
+  
+  if (!enterShellSection) {
+    console.warn("Enter the Shell section not found");
+    return;
+  }
   if (!blastoiseAppSection) {
     console.warn("blastoise.app section not found");
     return;
   }
+  
+  console.log("Enter the Shell section found:", enterShellSection);
+  
+  window.enterShellSection = enterShellSection;
+  
+  // Set initial state - hidden
+  gsap.set(enterShellSection, {
+    opacity: 0,
+    y: 50,
+    visibility: "hidden"
+  });
+
+  // Debug UI: mark the trigger start line (top center)
+  const triggerMarkerId = "enter-shell-trigger-marker";
+  const mainScrollEl = document.querySelector("#main");
+  if (mainScrollEl) {
+    let marker = document.getElementById(triggerMarkerId);
+    if (!marker) {
+      marker = document.createElement("div");
+      marker.id = triggerMarkerId;
+      marker.textContent = "Enter the Shell trigger (top center)";
+    }
+    if (marker.parentElement !== mainScrollEl) {
+      mainScrollEl.appendChild(marker);
+    }
+    const updateMarkerPosition = () => {
+      const scrollY = locoScroll?.scroll?.instance?.scroll?.y ?? mainScrollEl.scrollTop;
+      marker.style.top = `${scrollY + (window.innerHeight / 2)}px`;
+    };
+    updateMarkerPosition();
+    if (locoScroll) {
+      locoScroll.on("scroll", updateMarkerPosition);
+    }
+    window.addEventListener("resize", updateMarkerPosition);
+  }
+  
+  // Fade in when the bottom of the section reaches the viewport bottom
+  const enterShellFade = gsap.to(enterShellSection, {
+    opacity: 1,
+    y: 0,
+    visibility: "visible",
+    duration: 1,
+    ease: "power2.out",
+    paused: true
+  });
+
+  const mainEl = document.querySelector("#main");
+  let enterShellRevealed = false;
+  const checkEnterShellReveal = () => {
+    if (enterShellRevealed || !heroZoomComplete) {
+      return;
+    }
+    const rect = enterShellSection.getBoundingClientRect();
+    if (rect.bottom <= window.innerHeight) {
+      enterShellRevealed = true;
+      enterShellFade.play();
+      console.log("Enter the Shell - fade animation started");
+    }
+  };
+  checkEnterShellReveal();
+  if (locoScroll) {
+    locoScroll.on("scroll", checkEnterShellReveal);
+  }
+  window.addEventListener("resize", checkEnterShellReveal);
   
   // Prepare blastoise.app + remaining sections as hidden
   gsap.set([blastoiseAppSection, ...otherSections], {
