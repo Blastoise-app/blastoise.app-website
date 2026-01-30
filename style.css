@@ -13,33 +13,11 @@ html,body{
 #main{
     position: relative;
     overflow-x: hidden;
-    overflow-y: hidden; /* Locomotive Scroll manages scroll via transforms */
+    overflow-y: scroll; /* Force scrollbar to appear */
     background-color: #2D0202;
     width: 100%;
     height: 100vh; /* CRITICAL: Fixed height for Locomotive Scroll */
     /* Locomotive Scroll will manage the scrolling */
-}
-
-[data-scroll-container]{
-    opacity: 1 !important;
-    visibility: visible !important;
-}
-
-#enter-shell-trigger-marker{
-    position: absolute;
-    left: 0;
-    right: 0;
-    transform: translateY(-50%);
-    height: 24px;
-    line-height: 24px;
-    border-top: 3px dashed #39ff14;
-    box-shadow: 0 0 8px #39ff14;
-    z-index: 9999;
-    pointer-events: none;
-    color: #39ff14;
-    font-family: a;
-    font-size: 12px;
-    padding-left: 12px;
 }
 
 @font-face{
@@ -84,7 +62,7 @@ html,body{
     width: 100%;
     height: 100%;
     object-fit: contain;
-    object-position: center;
+    object-position: 55% 45%; /* Shift image slightly right and up to avoid bottom-left text */
     /* transform-origin is set dynamically by JavaScript based on entry-portal position */
     will-change: transform;
     image-rendering: auto;
@@ -101,6 +79,15 @@ html,body{
     /* Don't force transform - let GSAP control it */
     max-width: 100%;
     max-height: 100%;
+}
+
+@media (max-width: 640px) {
+    #hero-blastoise{
+        object-position: 50% 50%; /* Keep centered on small screens */
+    }
+    .bottom-page1>h1{
+        font-size: clamp(1.5rem, 7vw, 3rem);
+    }
 }
 
 .entry-portal{
@@ -128,17 +115,17 @@ html,body{
     left: 0; /* Will be set by JavaScript */
     top: 0; /* Will be set by JavaScript */
     pointer-events: none;
-    opacity: 1;
+    opacity: 0;
     z-index: 20; /* Higher than image (z-index: 15) so it appears on top */
-    border: 8px solid #FF00FF; /* Bright magenta for visibility */
-    background: rgba(255, 0, 255, 0.6);
+    border: none;
+    background: transparent;
     box-sizing: border-box;
-    box-shadow: 0 0 30px #FF00FF; /* Strong glow */
+    box-shadow: none;
 }
 
 #page1-5-entry{
     position: relative;
-    min-height: 600vh;
+    min-height: 0;
     width: 100vw;
     background: linear-gradient(to bottom, 
         rgba(0,0,0,1) 0%, 
@@ -149,24 +136,23 @@ html,body{
     padding-top: 0;
     margin-top: 0;
     height: auto;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
 }
 
-body.hero-zoom-complete #page1-5-entry{
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-}
 
 .entry-content{
-    padding: 20vw 10vw;
+    padding: 8vh 5vw 4vh;
     color: #fff;
     font-family: a;
     display: flex;
     flex-direction: column;
-    gap: 30vh;
+    gap: 8vh;
+}
+
+@media (max-width: 768px) {
+    .entry-content{
+        padding: 6vh 4vw 3vh;
+        gap: 6vh;
+    }
 }
 
 .entry-section{
@@ -178,39 +164,99 @@ body.hero-zoom-complete #page1-5-entry{
     visibility: hidden;
 }
 
+.entry-section--apps{
+    text-align: left;
+}
+
+.entry-section--apps > h2{
+    text-align: center;
+}
+
+.entry-section--apps > .divider{
+    text-align: center;
+}
+
+.entry-section--apps .download-buttons{
+    justify-content: flex-start;
+}
+
+.app-block{
+    margin-top: 2rem;
+}
+
+.app-title{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.coming-soon-badge{
+    font-family: a;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.waitlist-button{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1.5rem;
+    padding: 12px 24px;
+    border-radius: 999px;
+    border: 1px solid #fff;
+    color: #fff;
+    text-decoration: none;
+    font-family: a;
+    font-size: 1rem;
+    background: transparent;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.waitlist-button:hover{
+    opacity: 0.85;
+    transform: translateY(-1px);
+}
+
 .entry-section h2{
-    font-size: 5vw;
+    font-size: clamp(2rem, 5vw, 4rem);
     font-weight: 100;
-    margin-bottom: 2vw;
+    margin-bottom: 1.5rem;
     line-height: 1.2;
 }
 
 .entry-section h3{
-    font-size: 3vw;
+    font-size: clamp(1.5rem, 3vw, 2.5rem);
     font-weight: 100;
-    margin-bottom: 1.5vw;
-    margin-top: 2vw;
+    margin-bottom: 1rem;
+    margin-top: 1.5rem;
     line-height: 1.2;
 }
 
 .entry-section p{
-    font-size: 1.8vw;
+    font-size: clamp(1rem, 1.5vw, 1.25rem);
     opacity: 0.7;
     line-height: 1.6;
-    margin-bottom: 1vw;
+    margin-bottom: 0.75rem;
 }
 
 .divider{
-    font-size: 2vw;
+    font-size: clamp(1rem, 2vw, 1.5rem);
     opacity: 0.5;
-    margin: 3vw 0;
+    margin: 2rem 0;
     text-align: center;
 }
 
 .download-buttons{
     display: flex;
-    gap: 2vw;
-    margin-top: 3vw;
+    gap: clamp(1rem, 2vw, 1.5rem);
+    margin-top: 2rem;
     flex-wrap: wrap;
     align-items: center;
 }
@@ -226,9 +272,10 @@ body.hero-zoom-complete #page1-5-entry{
 }
 
 .app-store-badge{
-    height: 60px;
+    height: clamp(40px, 8vw, 60px);
     width: auto;
     display: block;
+    max-width: 100%;
 }
 
 .download-btn{
@@ -295,32 +342,37 @@ body.hero-zoom-complete #page1-5-entry{
 
 .bottom-page1{
     position: absolute;
-    top: 16%;
-    bottom: auto;
+    bottom: 8%; /* Fallback - will be overridden by JavaScript */
     height: auto;
-    width: min(520px, 45vw);
-    left: 8%;
+    width: auto;
+    left: 5%;
+    right: auto;
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
     gap: 2vw;
-    z-index: 40;
+    z-index: 25;
     opacity: 1;
     transition: opacity 0.5s ease;
+    /* Ensure it doesn't overlap with hero image */
+    max-width: 40%;
+    pointer-events: none;
 }
 
 .bottom-page1>h1{
     font-family: a;
-    font-size: clamp(40px, 6vw, 80px);
+    font-size: 5vw;
     font-weight: 100;
     line-height: 1.1;
     color: #fff;
     margin-bottom: 1vw;
+    text-align: left;
 }
 
 .bottom-page1-inner{
     display: flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: space-between;
     font-family: a;
     gap: 2vw;
     width: 100%;
@@ -351,49 +403,6 @@ body.hero-zoom-complete #page1-5-entry{
     line-height: 1.5;
     flex: 1;
     margin-right: 2vw;
-}
-
-@media (max-width: 768px){
-    #page1>nav{
-        padding: 0 16px;
-        height: 12vh;
-    }
-
-    #page1>nav>img{
-        width: 40vw;
-        max-width: 180px;
-        margin-top: 0;
-    }
-
-    .bottom-page1{
-        top: 20%;
-        left: 6%;
-        width: 88vw;
-        gap: 6vw;
-    }
-
-    .bottom-page1>h1{
-        font-size: clamp(32px, 9vw, 56px);
-    }
-
-    .bottom-page1-inner{
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 4vw;
-    }
-
-    .bottom-page1-inner>button{
-        font-size: 14px;
-        padding: 12px 24px;
-    }
-}
-
-@media (max-width: 480px){
-    .bottom-page1{
-        top: 18%;
-        left: 5%;
-        width: 90vw;
-    }
 }
 
 #page2{
@@ -891,7 +900,7 @@ body.hero-zoom-complete #page1-5-entry{
 .center14{
     height: 0%;
     width: 100%;
-    background-color: #0a3cce;
+    background-color: #2d0000;
     position: absolute;
     left: 50%;
     top: 50%;
@@ -918,4 +927,14 @@ body.hero-zoom-complete #page1-5-entry{
     background-color: black;
     display: flex;
     align-items: center;
+}
+
+/* Hide Locomotive Scroll indicator */
+[data-scroll-container]::before,
+[data-scroll-container]::after,
+.c-scrollbar,
+.c-scrollbar_thumb {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
 }

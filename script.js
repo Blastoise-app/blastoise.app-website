@@ -1,76 +1,213 @@
 // Global locomotive scroll instance
 let locoScroll;
-let heroZoomComplete = false;
 
 function loco(){
-  gsap.registerPlugin(ScrollTrigger);
+    gsap.registerPlugin(ScrollTrigger);
 
+// Using Locomotive Scroll from Locomotive https://github.com/locomotivemtl/locomotive-scroll
+
+// Wait for DOM to be fully loaded and content to be measured
+setTimeout(() => {
   const mainEl = document.querySelector("#main");
-  if (!mainEl) {
-    console.warn("Locomotive Scroll init skipped: #main not found");
-    return;
-  }
-
-  if (locoScroll) {
-    locoScroll.update();
-    ScrollTrigger.refresh();
-    return;
-  }
-
-  locoScroll = new LocomotiveScroll({
-    el: mainEl,
-    smooth: true,
-    multiplier: 1,
-    class: "is-revealed",
-    smoothMobile: false,
-    resetNativeScroll: false,
-    inertia: 0.5
-  });
-
-  locoScroll.on("scroll", ScrollTrigger.update);
-
-  ScrollTrigger.scrollerProxy("#main", {
-    scrollTop(value) {
-      if (arguments.length) {
-        locoScroll.scrollTo(value, { duration: 0, disableLerp: true });
-        return;
+  if (mainEl) {
+    // CRITICAL: Ensure we start at the top before initializing Locomotive Scroll
+    mainEl.scrollTop = 0;
+    window.scrollTo(0, 0);
+    
+    // CRITICAL: Force #main to be visible BEFORE initializing Locomotive Scroll
+    // Locomotive Scroll sets opacity: 0 during initialization, which hides everything
+    mainEl.style.setProperty("opacity", "1", "important");
+    mainEl.style.setProperty("pointer-events", "auto", "important");
+    
+    // CRITICAL: Ensure main element can scroll BEFORE initializing Locomotive Scroll
+    // Remove any transforms or styles that might prevent scrolling
+    mainEl.style.height = "";
+    mainEl.style.minHeight = "";
+    
+    console.log("Before Locomotive Scroll - scrollHeight:", mainEl.scrollHeight, "clientHeight:", mainEl.clientHeight);
+    
+    locoScroll = new LocomotiveScroll({
+      el: mainEl,
+      smooth: true,
+      multiplier: 1,
+      class: "is-revealed",
+      smoothMobile: false,
+      resetNativeScroll: false, // Keep native scroll disabled for Locomotive Scroll
+      inertia: 0.5 // Add some inertia for smoother feel
+    });
+    
+    console.log("Locomotive Scroll initialized:", locoScroll);
+    
+    // CRITICAL: Force Locomotive Scroll to update multiple times to ensure scrolling works
+    setTimeout(() => {
+      if (locoScroll) {
+        locoScroll.update();
+        console.log("After first update - scrollHeight:", mainEl.scrollHeight, "clientHeight:", mainEl.clientHeight);
       }
-      return locoScroll.scroll?.instance?.scroll?.y ?? mainEl.scrollTop;
-    },
-    scrollLeft() {
-      return 0;
-    },
-    getBoundingClientRect() {
-      return {
-        top: 0,
-        left: 0,
-        width: window.innerWidth,
-        height: window.innerHeight
-      };
-    },
-    pinType: "transform"
-  });
-
-  ScrollTrigger.addEventListener("refresh", () => {
-    if (locoScroll) {
-      locoScroll.update();
-    }
-  });
-
-  let resizeTimeout;
-  window.addEventListener("resize", () => {
-    clearTimeout(resizeTimeout);
-    resizeTimeout = setTimeout(() => {
+    }, 100);
+    
+    setTimeout(() => {
+      if (locoScroll) {
+        locoScroll.update();
+        console.log("After second update - scrollHeight:", mainEl.scrollHeight, "clientHeight:", mainEl.clientHeight);
+        console.log("Locomotive Scroll scroll instance:", locoScroll.scroll?.instance);
+      }
+    }, 500);
+    
+    // CRITICAL: Immediately force #main to be visible after Locomotive Scroll initialization
+    // Locomotive Scroll may set opacity: 0 during initialization
+    mainEl.style.setProperty("opacity", "1", "important");
+    mainEl.style.setProperty("pointer-events", "auto", "important");
+    
+    // CRITICAL: Exclude hero image from Locomotive Scroll transforms
+    // This prevents Locomotive Scroll from moving/hiding it
+    setTimeout(() => {
+      const heroBlastoise = document.querySelector("#hero-blastoise");
+      const heroContainer = document.querySelector(".hero-blastoise-container");
+      const page1 = document.querySelector("#page1");
+      
+      // Ensure page1 is marked as a scroll section
+      // Remove data-scroll attributes that interfere with ScrollTrigger
+      if (page1) {
+        page1.removeAttribute("data-scroll-section");
+      }
+      if (heroBlastoise) {
+        heroBlastoise.removeAttribute("data-scroll");
+        heroBlastoise.removeAttribute("data-scroll-speed");
+      }
+      if (heroContainer) {
+        heroContainer.removeAttribute("data-scroll");
+        heroContainer.removeAttribute("data-scroll-speed");
+      }
+      
+      // Force Locomotive Scroll to update and respect our settings
       if (locoScroll) {
         locoScroll.update();
       }
-      ScrollTrigger.refresh();
-    }, 150);
-  });
+    }, 100);
+    
+    // Immediately scroll to top after initialization - do this multiple times
+    locoScroll.scrollTo(0, { duration: 0, disableLerp: true });
+    
+    // Also force scroll position via the scroll instance directly
+    if (locoScroll.scroll && locoScroll.scroll.instance) {
+      locoScroll.scroll.instance.scroll.y = 0;
+      locoScroll.scroll.instance.scroll.x = 0;
+    }
+    
+    // CRITICAL: Watch for Locomotive Scroll updates and ensure #main stays visible
+    locoScroll.on("scroll", () => {
+      mainEl.style.setProperty("opacity", "1", "important");
+      mainEl.style.setProperty("pointer-events", "auto", "important");
+      ScrollTrigger.update();
+    });
+    
+    // CRITICAL: Watch for Locomotive Scroll ready event and ensure #main is visible
+    locoScroll.on("ready", () => {
+      mainEl.style.setProperty("opacity", "1", "important");
+      mainEl.style.setProperty("pointer-events", "auto", "important");
+      console.log("Locomotive Scroll ready - forced #main to be visible");
+    });
 
-  ScrollTrigger.refresh();
+    // tell ScrollTrigger to use these proxy methods for the "#main" element since Locomotive Scroll is hijacking things
+    ScrollTrigger.scrollerProxy("#main", {
+      scrollTop(value) {
+        if (arguments.length) {
+          // Setting scroll position
+          locoScroll.scrollTo(value, { duration: 0, disableLerp: true });
+          return;
+        }
+        // Getting scroll position - Use the DOM element's scrollTop directly
+        // Locomotive Scroll controls #main, so we read from the actual DOM element
+        const mainEl = document.querySelector("#main");
+        return mainEl ? (mainEl.scrollTop || 0) : 0;
+      },
+      scrollLeft(value) {
+        return 0;
+      },
+      getBoundingClientRect() {
+        // CRITICAL: Return actual viewport dimensions for responsive behavior
+        const rect = {
+          top: 0,
+          left: 0,
+          width: window.innerWidth,
+          height: window.innerHeight
+        };
+        return rect;
+      },
+      pinType: "transform"
+    });
+    
+    // CRITICAL: Force ScrollTrigger to refresh after proxy is set up
+    ScrollTrigger.refresh();
+
+    // each time the window updates, we should refresh ScrollTrigger and then update LocomotiveScroll. 
+    ScrollTrigger.addEventListener("refresh", () => {
+      if (locoScroll) {
+        locoScroll.update();
+      }
+    });
+    
+    // CRITICAL: Handle window resize to update Locomotive Scroll and ScrollTrigger
+    let resizeTimeout;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        if (locoScroll) {
+          locoScroll.update();
+          console.log("Window resized - Locomotive Scroll updated");
+        }
+        ScrollTrigger.refresh();
+        console.log("Window resized - ScrollTrigger refreshed");
+      }, 150); // Debounce resize events
+    });
+
+    // CRITICAL: Watch for scroll events and update ScrollTrigger
+    locoScroll.on("scroll", () => {
+      // Update ScrollTrigger so it knows about the scroll - CRITICAL for animations
+      ScrollTrigger.update();
+      
+      // Keep #main visible during scroll
+      const mainEl = document.querySelector("#main");
+      if (mainEl) {
+        mainEl.style.setProperty("opacity", "1", "important");
+        mainEl.style.setProperty("pointer-events", "auto", "important");
+      }
+    });
+    
+    // CRITICAL: Update ScrollTrigger on every Locomotive Scroll event
+    // This is the pattern from GSAP's official Locomotive Scroll integration example
+    
+    // CRITICAL: Also listen for scroll events on the main element directly (for browser compatibility)
+    const mainElForScroll = document.querySelector("#main");
+    if (mainElForScroll) {
+      mainElForScroll.addEventListener("scroll", () => {
+        ScrollTrigger.update();
+      }, { passive: true });
+    }
+    
+    // Force updates to ensure scroll is enabled
+    setTimeout(() => {
+      if (locoScroll) {
+        locoScroll.update();
+        ScrollTrigger.refresh();
+      }
+    }, 200);
+    
+    setTimeout(() => {
+      if (locoScroll) {
+        locoScroll.update();
+        ScrollTrigger.refresh();
+      }
+    }, 500);
+  }
+}, 100);
+
+// Initial ScrollTrigger refresh
+ScrollTrigger.refresh();
 
 }
+loco()
 
 // Blastoise hero - STEP 1: Just make it visible and keep it visible
 function initBlastoiseHero() {
@@ -132,9 +269,26 @@ function initBlastoiseHero() {
       displayedHeight = displayedWidth / imageAspect;
     }
     
-    // Calculate image offset from container center (image is centered)
-    const imageOffsetX = (containerRect.width - displayedWidth) / 2;
-    const imageOffsetY = (containerRect.height - displayedHeight) / 2;
+    // Calculate image offset from container (accounting for actual object-position)
+    // object-position: X% Y% means the point at X% of the image aligns with X% of the container
+    // So left edge of image = containerWidth * X - imageWidth * X
+    const computedObjectPosition = getComputedStyle(heroBlastoise).objectPosition || "50% 50%";
+    const [posXRaw, posYRaw = "50%"] = computedObjectPosition.split(" ");
+    const parseObjectPosition = (value, fallback) => {
+      if (!value) return fallback;
+      if (value.endsWith("%")) {
+        const num = parseFloat(value);
+        return Number.isFinite(num) ? num / 100 : fallback;
+      }
+      if (value === "left" || value === "top") return 0;
+      if (value === "right" || value === "bottom") return 1;
+      if (value === "center") return 0.5;
+      return fallback;
+    };
+    const objectPositionX = parseObjectPosition(posXRaw, 0.5);
+    const objectPositionY = parseObjectPosition(posYRaw, 0.5);
+    const imageOffsetX = containerRect.width * objectPositionX - displayedWidth * objectPositionX;
+    const imageOffsetY = containerRect.height * objectPositionY - displayedHeight * objectPositionY;
     
     // Target position as a percentage of the displayed image dimensions
     // These values need to be calibrated based on where the black spot actually is
@@ -145,7 +299,7 @@ function initBlastoiseHero() {
     // We'll start with conservative estimates and adjust
     
     // Zoom target position: image-relative percentages
-    const targetPercentX = 0.376; // 37.6% from left of image (moved left slightly)
+    const targetPercentX = 0.3765; // 37.65% from left of image (half the last move)
     const targetPercentY = 0.408; // 40.8% from top of image (keep Y position)
     
     // Calculate pixel position relative to displayed image
@@ -181,10 +335,10 @@ function initBlastoiseHero() {
     const zoomTarget = document.querySelector("#zoom-target");
     if (!zoomTarget) {
       // Fallback: use calibrated position in black space under left cannon
-      return "37.6% 40.8%";
+      return "38.1% 40.8%";
     }
     
-    // Get image's actual displayed dimensions (accounting for object-fit: contain)
+    // Get image's actual displayed dimensions (getBoundingClientRect accounts for object-position)
     const imageRect = heroBlastoise.getBoundingClientRect();
     const targetRect = zoomTarget.getBoundingClientRect();
     
@@ -205,6 +359,45 @@ function initBlastoiseHero() {
   window.addEventListener('resize', () => {
     positionZoomTarget();
   });
+  
+  // Position bottom-page1 text to stay under Blastoise image
+  function positionBottomText() {
+    const bottomPage1 = document.querySelector(".bottom-page1");
+    const heroBlastoise = document.querySelector("#hero-blastoise");
+    const page1 = document.querySelector("#page1");
+    
+    if (!bottomPage1 || !heroBlastoise || !page1) {
+      return;
+    }
+    
+    // Get image's actual displayed dimensions and position
+    const imageRect = heroBlastoise.getBoundingClientRect();
+    const page1Rect = page1.getBoundingClientRect();
+    
+    // Calculate where the bottom of the image is relative to page1
+    const imageBottomRelativeToPage1 = imageRect.bottom - page1Rect.top;
+    
+    // Position text just below the image (with some padding)
+    // But ensure it doesn't go below 8% from bottom of viewport
+    const minBottom = page1Rect.height * 0.08; // 8% of viewport height
+    const desiredBottom = page1Rect.height - imageBottomRelativeToPage1 + 20; // 20px padding below image
+    const finalBottom = Math.max(minBottom, desiredBottom);
+    
+    bottomPage1.style.bottom = `${finalBottom}px`;
+  }
+  
+  // Position text initially and on resize
+  if (heroBlastoise.complete) {
+    positionBottomText();
+  } else {
+    heroBlastoise.addEventListener('load', positionBottomText);
+  }
+  window.addEventListener('resize', () => {
+    positionBottomText();
+  });
+  
+  // Also update position during scroll (in case image moves)
+  ScrollTrigger.addEventListener("refresh", positionBottomText);
   
   // Set initial state with image-relative transform origin
   const initialTransformOrigin = calculateImageRelativeTransformOrigin();
@@ -247,16 +440,6 @@ function initBlastoiseHero() {
         scrub: 1.5, // Smooth scrubbing with interpolation (higher = smoother, slower response)
         scroller: scroller,
         invalidateOnRefresh: true,
-        onUpdate: (self) => {
-          if (!heroZoomComplete && self.progress >= 1) {
-            heroZoomComplete = true;
-            document.body.classList.add("hero-zoom-complete");
-            if (locoScroll) {
-              locoScroll.update();
-            }
-            ScrollTrigger.refresh();
-          }
-        },
         // Recalculate everything on resize for full responsiveness
         onRefresh: function() {
           const newOrigin = calculateImageRelativeTransformOrigin();
@@ -267,6 +450,33 @@ function initBlastoiseHero() {
         },
       }
     });
+    
+    // Adjust z-index so text is visible when zoomed out, but image can cover it as zoom increases
+    const bottomPage1 = document.querySelector(".bottom-page1");
+    const heroContainer = document.querySelector(".hero-blastoise-container");
+    if (bottomPage1 && heroContainer) {
+      // Create a ScrollTrigger that increases image z-index only after zoom has progressed significantly
+      // This ensures text stays visible when image is zoomed out
+      ScrollTrigger.create({
+        trigger: page1,
+        start: "top top",
+        end: () => `+=${sectionHeight * 2}`,
+        scroller: scroller,
+        invalidateOnRefresh: true,
+        onUpdate: function(self) {
+          // Only increase z-index when zoom has progressed enough (after ~20% scroll progress)
+          // This ensures text is visible when image is fully zoomed out
+          if (self.progress > 0.2) {
+            heroContainer.style.zIndex = "30";
+          } else {
+            heroContainer.style.zIndex = "20";
+          }
+        },
+        onRefresh: function() {
+          this.end = `+=${page1.offsetHeight * 2}`;
+        },
+      });
+    }
     
     // Pin page1 AFTER creating the zoom animation
     // This way the zoom animation calculates start position before pin spacing exists
@@ -403,116 +613,108 @@ function initEntrySections() {
   
   console.log(`Found ${entrySections.length} entry sections`);
   
-  // Find "Enter the Shell" section (first one)
-  const enterShellSection = entrySections[0];
-  const blastoiseAppSection = entrySections[1];
-  const otherSections = Array.from(entrySections).slice(2);
-  
-  if (!enterShellSection) {
-    console.warn("Enter the Shell section not found");
-    return;
-  }
-  if (!blastoiseAppSection) {
-    console.warn("blastoise.app section not found");
-    return;
-  }
-  
-  console.log("Enter the Shell section found:", enterShellSection);
-  
-  window.enterShellSection = enterShellSection;
-  
-  // Set initial state - hidden
-  gsap.set(enterShellSection, {
-    opacity: 0,
-    y: 50,
-    visibility: "hidden"
+  // Find "Enter the Shell" section by heading text (may not exist)
+  const enterShellSection = Array.from(entrySections).find((section) => {
+    const heading = section.querySelector("h2");
+    return heading && heading.textContent.trim() === "Enter the Shell";
   });
-
-  // Debug UI: mark the trigger start line (top center)
-  const triggerMarkerId = "enter-shell-trigger-marker";
-  const mainScrollEl = document.querySelector("#main");
-  if (mainScrollEl) {
-    let marker = document.getElementById(triggerMarkerId);
-    if (!marker) {
-      marker = document.createElement("div");
-      marker.id = triggerMarkerId;
-      marker.textContent = "Enter the Shell trigger (top center)";
-    }
-    if (marker.parentElement !== mainScrollEl) {
-      mainScrollEl.appendChild(marker);
-    }
-    const updateMarkerPosition = () => {
-      const scrollY = locoScroll?.scroll?.instance?.scroll?.y ?? mainScrollEl.scrollTop;
-      marker.style.top = `${scrollY + (window.innerHeight / 2)}px`;
-    };
-    updateMarkerPosition();
-    if (locoScroll) {
-      locoScroll.on("scroll", updateMarkerPosition);
-    }
-    window.addEventListener("resize", updateMarkerPosition);
-  }
+  const otherSections = enterShellSection
+    ? Array.from(entrySections).filter((section) => section !== enterShellSection)
+    : Array.from(entrySections);
   
-  // Fade in when the bottom of the section reaches the viewport bottom
-  const enterShellFade = gsap.to(enterShellSection, {
-    opacity: 1,
-    y: 0,
-    visibility: "visible",
-    duration: 1,
-    ease: "power2.out",
-    paused: true
-  });
+  const bottomPage1 = document.querySelector(".bottom-page1");
 
-  const mainEl = document.querySelector("#main");
-  let enterShellRevealed = false;
-  const checkEnterShellReveal = () => {
-    if (enterShellRevealed || !heroZoomComplete) {
-      return;
-    }
-    const rect = enterShellSection.getBoundingClientRect();
-    if (rect.bottom <= window.innerHeight) {
-      enterShellRevealed = true;
-      enterShellFade.play();
-      console.log("Enter the Shell - fade animation started");
-    }
-  };
-  checkEnterShellReveal();
-  if (locoScroll) {
-    locoScroll.on("scroll", checkEnterShellReveal);
-  }
-  window.addEventListener("resize", checkEnterShellReveal);
-  
-  // Prepare blastoise.app + remaining sections as hidden
-  gsap.set([blastoiseAppSection, ...otherSections], {
-    opacity: 0,
-    y: 50,
-    visibility: "hidden"
-  });
-
-  // Fade in blastoise.app when it enters, then reveal all remaining sections
-  const blastoiseAppFade = gsap.to(blastoiseAppSection, {
-    opacity: 1,
-    y: 0,
-    visibility: "visible",
-    duration: 1,
-    ease: "power2.out",
-    paused: true
-  });
-
-  ScrollTrigger.create({
-    trigger: blastoiseAppSection,
-    scroller: scroller,
-    start: "top 85%",
-    end: "top 85%",
-    once: true,
-    onEnter: () => {
-      blastoiseAppFade.play();
-      gsap.set(otherSections, {
-        opacity: 1,
-        y: 0,
-        visibility: "visible"
+  // Fade out the "blastoise.app" text when the entry content starts
+  // This keeps the hero text visible until the next section is reached
+  if (bottomPage1) {
+    const entryContainer = document.querySelector("#page1-5-entry");
+    if (entryContainer) {
+      ScrollTrigger.create({
+        trigger: entryContainer,
+        scroller: scroller,
+        start: "top bottom",
+        end: "top center",
+        scrub: true,
+        onUpdate: (self) => {
+          gsap.to(bottomPage1, {
+            opacity: 1 - self.progress,
+            duration: 0.1,
+            ease: "none"
+          });
+        }
       });
-      console.log("blastoise.app - fade animation started; remaining sections revealed");
     }
+  }
+
+  if (enterShellSection) {
+    console.log("Enter the Shell section found:", enterShellSection);
+    window.enterShellSection = enterShellSection;
+    
+    // Set initial state - hidden
+    gsap.set(enterShellSection, {
+      opacity: 0,
+      y: 50,
+      visibility: "visible"
+    });
+    
+    // Fade in when the section reaches the middle of the viewport
+    const enterShellFade = gsap.to(enterShellSection, {
+      opacity: 1,
+      y: 0,
+      duration: 1,
+      ease: "power2.out",
+      paused: true,
+      onComplete: () => {
+        if (locoScroll) {
+          locoScroll.start();
+          locoScroll.update();
+        }
+      }
+    });
+
+    const mainEl = document.querySelector("#main");
+    ScrollTrigger.create({
+      trigger: enterShellSection,
+      scroller: scroller,
+      start: "center center",
+      end: "center center",
+      once: true,
+      onEnter: () => {
+        if (locoScroll) {
+          locoScroll.stop();
+        }
+        enterShellFade.play();
+        console.log("Enter the Shell - fade animation started");
+      }
+    });
+  } else {
+    console.warn("Enter the Shell section not found");
+  }
+  
+  otherSections.forEach((section, index) => {
+    gsap.set(section, {
+      opacity: 0,
+      y: 50,
+      visibility: "hidden"
+    });
+    
+    gsap.to(section, {
+      opacity: 1,
+      y: 0,
+      visibility: "visible",
+      ease: "power2.out",
+      duration: 1,
+      scrollTrigger: {
+        trigger: section,
+        scroller: scroller,
+        start: "top 85%",
+        end: "top 40%",
+        toggleActions: "play none none reverse",
+        onEnter: () => {
+          console.log(`Entry section ${index + 2} entered viewport`);
+        }
+      }
+    });
   });
   
   // Refresh ScrollTrigger after creating animations
@@ -525,13 +727,11 @@ console.log("Setting up Blastoise hero initialization...");
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     console.log("DOMContentLoaded fired, starting initialization");
-    loco();
     setTimeout(initializeBlastoiseHeroWhenReady, 500);
     setTimeout(initializeEntrySectionsWhenReady, 500);
   });
 } else {
   console.log("DOM already loaded, starting initialization");
-  loco();
   setTimeout(initializeBlastoiseHeroWhenReady, 500);
   setTimeout(initializeEntrySectionsWhenReady, 500);
 }
