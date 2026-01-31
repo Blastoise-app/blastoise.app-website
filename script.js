@@ -430,7 +430,7 @@ function initBlastoiseHero() {
     // Animation progresses based on how far user scrolls through the section
     // NO x/y translations - zoom happens at transform-origin point (image-relative)
     const zoomAnimation = gsap.to(heroBlastoise, {
-      scale: 91, // Final zoom level
+      scale: 95, // Final zoom level
       // NO x/y translations - zoom happens at transform-origin point
       ease: "power1.out", // Smooth easing instead of "none" for controlled animation
       scrollTrigger: {
