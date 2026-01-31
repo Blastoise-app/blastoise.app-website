@@ -65,7 +65,8 @@ html,body{
     object-position: 55% 45%; /* Shift image slightly right and up to avoid bottom-left text */
     /* transform-origin is set dynamically by JavaScript based on entry-portal position */
     will-change: transform;
-    image-rendering: auto;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
     transition: none;
@@ -438,7 +439,7 @@ html,body{
     position: relative;
     height: 100vh;
     width: 100vw;
-    background-color: red;
+    background-color: black;
 }
 
 #page3>canvas{
