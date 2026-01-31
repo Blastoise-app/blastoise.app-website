@@ -430,13 +430,13 @@ function initBlastoiseHero() {
     // Animation progresses based on how far user scrolls through the section
     // NO x/y translations - zoom happens at transform-origin point (image-relative)
     const zoomAnimation = gsap.to(heroBlastoise, {
-      scale: 120, // Final zoom level
+      scale: 91, // Final zoom level
       // NO x/y translations - zoom happens at transform-origin point
       ease: "power1.out", // Smooth easing instead of "none" for controlled animation
       scrollTrigger: {
         trigger: page1,
         start: "top top", // When section enters viewport
-        end: () => `+=${sectionHeight * 2}`, // End after scrolling 2x section height (normalized to section)
+        end: () => `+=${sectionHeight * 0.017}`, // End after scrolling 0.017x section height (normalized to section)
         scrub: 1.5, // Smooth scrubbing with interpolation (higher = smoother, slower response)
         scroller: scroller,
         invalidateOnRefresh: true,
@@ -446,7 +446,7 @@ function initBlastoiseHero() {
           gsap.set(heroBlastoise, { transformOrigin: newOrigin });
           positionZoomTarget(); // Reposition debug box
           // Update end point based on new section height
-          this.end = `+=${page1.offsetHeight * 2}`;
+          this.end = `+=${page1.offsetHeight * 0.017}`;
         },
       }
     });
@@ -460,7 +460,7 @@ function initBlastoiseHero() {
       ScrollTrigger.create({
         trigger: page1,
         start: "top top",
-        end: () => `+=${sectionHeight * 2}`,
+        end: () => `+=${sectionHeight * 0.017}`,
         scroller: scroller,
         invalidateOnRefresh: true,
         onUpdate: function(self) {
@@ -473,7 +473,7 @@ function initBlastoiseHero() {
           }
         },
         onRefresh: function() {
-          this.end = `+=${page1.offsetHeight * 2}`;
+          this.end = `+=${page1.offsetHeight * 0.017}`;
         },
       });
     }
@@ -484,14 +484,14 @@ function initBlastoiseHero() {
     ScrollTrigger.create({
       trigger: page1,
       start: "top top",
-      end: () => `+=${sectionHeight * 2}`, // Match zoom animation end distance (normalized to section)
+      end: () => `+=${sectionHeight * 0.017}`, // Match zoom animation end distance (normalized to section)
       pin: true,
       pinSpacing: true,
       scroller: scroller,
       invalidateOnRefresh: true,
       onRefresh: function() {
         // Update end point based on new section height
-        this.end = `+=${page1.offsetHeight * 2}`;
+        this.end = `+=${page1.offsetHeight * 1}`;
       }
     });
     
