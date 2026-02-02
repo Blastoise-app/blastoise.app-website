@@ -36,6 +36,19 @@ setTimeout(() => {
       inertia: 0.5 // Add some inertia for smoother feel
     });
     
+    // Check if hero image is already loaded, otherwise disable scrolling until it loads
+    const heroBlastoise = document.querySelector("#hero-blastoise");
+    if (heroBlastoise && heroBlastoise.complete && heroBlastoise.naturalWidth > 0) {
+      // Image already loaded, enable scrolling
+      mainEl.classList.add("scroll-enabled");
+      mainEl.style.overflowY = "scroll";
+    } else {
+      // Disable scrolling until hero image is loaded
+      if (locoScroll) {
+        locoScroll.stop();
+      }
+    }
+    
     console.log("Locomotive Scroll initialized:", locoScroll);
     
     // CRITICAL: Force Locomotive Scroll to update multiple times to ensure scrolling works
@@ -378,8 +391,11 @@ function initBlastoiseHero() {
     const imageBottomRelativeToPage1 = imageRect.bottom - page1Rect.top;
     
     // Position text just below the image (with some padding)
-    // But ensure it doesn't go below 8% from bottom of viewport
-    const minBottom = page1Rect.height * 0.08; // 8% of viewport height
+    // But ensure it doesn't go below minimum from bottom of viewport
+    // Use higher minimum on mobile (25%) vs desktop (8%)
+    const isMobile = window.innerWidth <= 640;
+    const minBottomPercent = isMobile ? 0.25 : 0.08; // 25% on mobile, 8% on desktop
+    const minBottom = page1Rect.height * minBottomPercent;
     const desiredBottom = page1Rect.height - imageBottomRelativeToPage1 + 20; // 20px padding below image
     const finalBottom = Math.max(minBottom, desiredBottom);
     
@@ -426,11 +442,15 @@ function initBlastoiseHero() {
     // Calculate section height for normalized scroll progress
     const sectionHeight = page1.offsetHeight;
     
+    // Determine final zoom level - much more zoom on mobile to avoid showing brown shell
+    const isMobile = window.innerWidth <= 640;
+    const finalScale = isMobile ? 95 * 10 : 95; // 950x on mobile, 95x on desktop
+    
     // Create zoom animation using normalized scroll progress (0 → 1)
     // Animation progresses based on how far user scrolls through the section
     // NO x/y translations - zoom happens at transform-origin point (image-relative)
     const zoomAnimation = gsap.to(heroBlastoise, {
-      scale: 95, // Final zoom level
+      scale: finalScale, // Final zoom level (475x on mobile, 95x on desktop)
       // NO x/y translations - zoom happens at transform-origin point
       ease: "power1.out", // Smooth easing instead of "none" for controlled animation
       scrollTrigger: {
@@ -447,6 +467,10 @@ function initBlastoiseHero() {
           positionZoomTarget(); // Reposition debug box
           // Update end point based on new section height
           this.end = `+=${page1.offsetHeight * 0.017}`;
+          // Recalculate scale for mobile/desktop on resize
+          const isMobileNow = window.innerWidth <= 640;
+          const newFinalScale = isMobileNow ? 95 * 10 : 95;
+          zoomAnimation.vars.scale = newFinalScale;
         },
       }
     });
@@ -577,8 +601,19 @@ function initializeBlastoiseHeroWhenReady() {
   console.log("All ready, initializing Blastoise hero");
   blastoiseHeroInitialized = true; // Mark as initialized
   
-  // Ensure Locomotive Scroll is updated (but don't force scroll position)
-  locoScroll.update();
+  // Enable scrolling now that image is loaded
+  const mainEl = document.querySelector("#main");
+  if (mainEl) {
+    mainEl.classList.add("scroll-enabled");
+    // Also enable via style to ensure it works
+    mainEl.style.overflowY = "scroll";
+  }
+  
+  // Enable Locomotive Scroll now that image is loaded
+  if (locoScroll) {
+    locoScroll.start();
+    locoScroll.update();
+  }
   ScrollTrigger.refresh();
   
   // Initialize hero animations
