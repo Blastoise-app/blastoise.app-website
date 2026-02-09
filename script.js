@@ -36,18 +36,9 @@ setTimeout(() => {
       inertia: 0.5 // Add some inertia for smoother feel
     });
     
-    // Check if hero image is already loaded, otherwise disable scrolling until it loads
-    const heroBlastoise = document.querySelector("#hero-blastoise");
-    if (heroBlastoise && heroBlastoise.complete && heroBlastoise.naturalWidth > 0) {
-      // Image already loaded, enable scrolling
+    // Keep scrolling enabled; animation setup handles image readiness independently.
       mainEl.classList.add("scroll-enabled");
       mainEl.style.overflowY = "scroll";
-    } else {
-      // Disable scrolling until hero image is loaded
-      if (locoScroll) {
-        locoScroll.stop();
-      }
-    }
     
     console.log("Locomotive Scroll initialized:", locoScroll);
     
@@ -108,13 +99,6 @@ setTimeout(() => {
       locoScroll.scroll.instance.scroll.x = 0;
     }
     
-    // CRITICAL: Watch for Locomotive Scroll updates and ensure #main stays visible
-    locoScroll.on("scroll", () => {
-      mainEl.style.setProperty("opacity", "1", "important");
-      mainEl.style.setProperty("pointer-events", "auto", "important");
-      ScrollTrigger.update();
-    });
-    
     // CRITICAL: Watch for Locomotive Scroll ready event and ensure #main is visible
     locoScroll.on("ready", () => {
       mainEl.style.setProperty("opacity", "1", "important");
@@ -130,23 +114,28 @@ setTimeout(() => {
           locoScroll.scrollTo(value, { duration: 0, disableLerp: true });
           return;
         }
-        // Getting scroll position - Use the DOM element's scrollTop directly
-        // Locomotive Scroll controls #main, so we read from the actual DOM element
-        const mainEl = document.querySelector("#main");
-        return mainEl ? (mainEl.scrollTop || 0) : 0;
+        // Read scroll position from Locomotive Scroll
+        // Locomotive Scroll v3.5.4 stores scroll position in scroll.instance.scroll.y
+        const locoY = locoScroll?.scroll?.instance?.scroll?.y;
+        if (typeof locoY === "number" && !isNaN(locoY)) {
+          return Math.max(0, locoY); // Ensure non-negative
+        }
+        // Fallback to DOM scrollTop
+        const domY = mainEl ? mainEl.scrollTop : 0;
+        return Math.max(0, domY); // Ensure non-negative
       },
       scrollLeft(value) {
         return 0;
       },
       getBoundingClientRect() {
-        // CRITICAL: Return actual viewport dimensions for responsive behavior
-        const rect = {
+        // Return viewport dimensions - #main is the viewport container
+        // For custom scrollers, this should represent the viewport
+        return {
           top: 0,
           left: 0,
           width: window.innerWidth,
           height: window.innerHeight
         };
-        return rect;
       },
       pinType: "transform"
     });
@@ -175,29 +164,10 @@ setTimeout(() => {
       }, 150); // Debounce resize events
     });
 
-    // CRITICAL: Watch for scroll events and update ScrollTrigger
-    locoScroll.on("scroll", () => {
-      // Update ScrollTrigger so it knows about the scroll - CRITICAL for animations
+    // Single scroll update path: Locomotive drives ScrollTrigger.
+    locoScroll.on("scroll", (e) => {
       ScrollTrigger.update();
-      
-      // Keep #main visible during scroll
-      const mainEl = document.querySelector("#main");
-      if (mainEl) {
-        mainEl.style.setProperty("opacity", "1", "important");
-        mainEl.style.setProperty("pointer-events", "auto", "important");
-      }
     });
-    
-    // CRITICAL: Update ScrollTrigger on every Locomotive Scroll event
-    // This is the pattern from GSAP's official Locomotive Scroll integration example
-    
-    // CRITICAL: Also listen for scroll events on the main element directly (for browser compatibility)
-    const mainElForScroll = document.querySelector("#main");
-    if (mainElForScroll) {
-      mainElForScroll.addEventListener("scroll", () => {
-        ScrollTrigger.update();
-      }, { passive: true });
-    }
     
     // Force updates to ensure scroll is enabled
     setTimeout(() => {
@@ -421,7 +391,8 @@ function initBlastoiseHero() {
     scale: 1,
     x: 0,
     y: 0,
-    transformOrigin: initialTransformOrigin
+    transformOrigin: initialTransformOrigin,
+    force3D: true // Enable GPU acceleration from the start
   });
   
   console.log("Initial transform origin (image-relative):", initialTransformOrigin);
@@ -436,11 +407,8 @@ function initBlastoiseHero() {
     
     // Recalculate transform origin to ensure it's accurate
     const transformOrigin = calculateImageRelativeTransformOrigin();
-    gsap.set(heroBlastoise, { transformOrigin: transformOrigin });
+    gsap.set(heroBlastoise, { transformOrigin: transformOrigin, force3D: true });
     console.log("Animation transform origin (image-relative):", transformOrigin);
-    
-    // Calculate section height for normalized scroll progress
-    const sectionHeight = page1.offsetHeight;
     
     // Determine final zoom level - much more zoom on mobile to avoid showing brown shell
     const isMobile = window.innerWidth <= 640;
@@ -449,101 +417,75 @@ function initBlastoiseHero() {
     // Create zoom animation using normalized scroll progress (0 → 1)
     // Animation progresses based on how far user scrolls through the section
     // NO x/y translations - zoom happens at transform-origin point (image-relative)
-    const zoomAnimation = gsap.to(heroBlastoise, {
+    let zoomAnimation;
+    // Calculate end distance - ensure it's always positive and meaningful
+    const calculateEndDistance = () => {
+      const height = page1.offsetHeight || window.innerHeight;
+      const distance = height * 1.5;
+      // Ensure minimum distance to prevent collapse
+      return Math.max(distance, window.innerHeight * 0.5);
+    };
+    
+    zoomAnimation = gsap.to(heroBlastoise, {
       scale: finalScale, // Final zoom level (475x on mobile, 95x on desktop)
       // NO x/y translations - zoom happens at transform-origin point
-      ease: "power1.out", // Smooth easing instead of "none" for controlled animation
+      ease: "none", // No easing for direct scroll-to-scale mapping
+      force3D: true, // Enable GPU acceleration for smoother performance
       scrollTrigger: {
         trigger: page1,
         start: "top top", // When section enters viewport
-        end: () => `+=${sectionHeight * 0.017}`, // End after scrolling 0.017x section height (normalized to section)
-        scrub: 1.5, // Smooth scrubbing with interpolation (higher = smoother, slower response)
+        end: () => {
+          const distance = calculateEndDistance();
+          console.log("Calculating end distance:", distance, "page1 height:", page1.offsetHeight);
+          return `+=${distance}`;
+        }, // End after scrolling 1.5x section height for smooth, slow zoom
+        scrub: 1.5, // Responsive while still smoothing wheel spikes.
+        pin: true,
+        pinSpacing: true,
         scroller: scroller,
         invalidateOnRefresh: true,
+        markers: false, // Set to true for debugging
+        anticipatePin: 1, // Help ScrollTrigger anticipate pinning
+        onUpdate: function(self) {
+          // Debug: log progress to verify animation is updating
+          if (self.progress > 0 && self.progress < 0.1) {
+            console.log("Zoom animation progress:", self.progress, "scale:", gsap.getProperty(heroBlastoise, "scale"));
+          }
+          const heroContainer = document.querySelector(".hero-blastoise-container");
+          if (heroContainer) {
+            heroContainer.style.zIndex = self.progress > 0.2 ? "30" : "20";
+          }
+        },
+        onEnter: function() {
+          console.log("Zoom animation entered - start:", this.start, "end:", this.end);
+        },
         // Recalculate everything on resize for full responsiveness
-        onRefresh: function() {
+        onRefresh: function(self) {
           const newOrigin = calculateImageRelativeTransformOrigin();
-          gsap.set(heroBlastoise, { transformOrigin: newOrigin });
+          gsap.set(heroBlastoise, { transformOrigin: newOrigin, force3D: true });
           positionZoomTarget(); // Reposition debug box
-          // Update end point based on new section height
-          this.end = `+=${page1.offsetHeight * 0.017}`;
           // Recalculate scale for mobile/desktop on resize
           const isMobileNow = window.innerWidth <= 640;
           const newFinalScale = isMobileNow ? 95 * 10 : 95;
+          if (zoomAnimation) {
           zoomAnimation.vars.scale = newFinalScale;
-        },
-      }
-    });
-    
-    // Adjust z-index so text is visible when zoomed out, but image can cover it as zoom increases
-    const bottomPage1 = document.querySelector(".bottom-page1");
-    const heroContainer = document.querySelector(".hero-blastoise-container");
-    if (bottomPage1 && heroContainer) {
-      // Create a ScrollTrigger that increases image z-index only after zoom has progressed significantly
-      // This ensures text stays visible when image is zoomed out
-      ScrollTrigger.create({
-        trigger: page1,
-        start: "top top",
-        end: () => `+=${sectionHeight * 0.017}`,
-        scroller: scroller,
-        invalidateOnRefresh: true,
-        onUpdate: function(self) {
-          // Only increase z-index when zoom has progressed enough (after ~20% scroll progress)
-          // This ensures text is visible when image is fully zoomed out
-          if (self.progress > 0.2) {
-            heroContainer.style.zIndex = "30";
-          } else {
-            heroContainer.style.zIndex = "20";
+          }
+          if (self && self.start !== undefined && self.end !== undefined) {
+            console.log("Zoom animation refreshed - start:", self.start, "end:", self.end, "distance:", calculateEndDistance());
+            // Validate end is positive
+            if (self.end <= self.start) {
+              console.error("Invalid ScrollTrigger end value - end must be > start");
+            }
           }
         },
-        onRefresh: function() {
-          this.end = `+=${page1.offsetHeight * 0.017}`;
-        },
-      });
-    }
-    
-    // Pin page1 AFTER creating the zoom animation
-    // This way the zoom animation calculates start position before pin spacing exists
-    // Match the end distance to the zoom animation (normalized to section)
-    ScrollTrigger.create({
-      trigger: page1,
-      start: "top top",
-      end: () => `+=${sectionHeight * 0.017}`, // Match zoom animation end distance (normalized to section)
-      pin: true,
-      pinSpacing: true,
-      scroller: scroller,
-      invalidateOnRefresh: true,
-      onRefresh: function() {
-        // Update end point based on new section height
-        this.end = `+=${page1.offsetHeight * 1}`;
       }
     });
     
-    // Force ScrollTrigger to recognize we're at the start position
-    setTimeout(() => {
-      ScrollTrigger.refresh();
-      const st = zoomAnimation.scrollTrigger;
-      if (st) {
-        st.update();
-        const mainEl = document.querySelector("#main");
-        const currentScroll = mainEl ? mainEl.scrollTop : 0;
-        // Log the actual start/end positions for debugging
-        console.log("ScrollTrigger start:", st.start, "end:", st.end, "current scroll:", currentScroll);
-        console.log("ScrollTrigger progress:", st.progress, "isActive:", st.isActive);
-        
-        // If we're already past the start position (shouldn't happen, but just in case)
-        // or if progress is 0 but we should be active, force an update
-        if (currentScroll >= st.start && st.progress === 0) {
-          console.log("Forcing ScrollTrigger to recognize start position");
-          st.update();
-        }
-      }
-    }, 200);
-    
-    // Also update immediately after creation
-    setTimeout(() => {
-      ScrollTrigger.update();
-    }, 100);
+    // Reset text/image layering when the zoom trigger is recreated.
+    const heroContainer = document.querySelector(".hero-blastoise-container");
+    if (heroContainer) {
+            heroContainer.style.zIndex = "20";
+          }
     
     console.log("Zoom animation created:", zoomAnimation);
     console.log("ScrollTrigger instance:", zoomAnimation.scrollTrigger);
@@ -554,7 +496,7 @@ function initBlastoiseHero() {
       clearTimeout(resizeTimeout);
       resizeTimeout = setTimeout(() => {
         const newOrigin = calculateImageRelativeTransformOrigin();
-        gsap.set(heroBlastoise, { transformOrigin: newOrigin });
+        gsap.set(heroBlastoise, { transformOrigin: newOrigin, force3D: true });
         console.log("Transform origin updated on resize:", newOrigin);
         ScrollTrigger.refresh();
       }, 250);
@@ -611,13 +553,31 @@ function initializeBlastoiseHeroWhenReady() {
   
   // Enable Locomotive Scroll now that image is loaded
   if (locoScroll) {
+    // Ensure we're at scroll position 0 before initializing animations
+    locoScroll.scrollTo(0, { duration: 0, disableLerp: true });
+    if (locoScroll.scroll && locoScroll.scroll.instance) {
+      locoScroll.scroll.instance.scroll.y = 0;
+      locoScroll.scroll.instance.scroll.x = 0;
+    }
     locoScroll.start();
     locoScroll.update();
   }
-  ScrollTrigger.refresh();
   
-  // Initialize hero animations
-  initBlastoiseHero();
+  // Wait for scroll position to settle before creating ScrollTrigger
+  requestAnimationFrame(() => {
+    // Double-check scroll is at 0
+    if (locoScroll && locoScroll.scroll && locoScroll.scroll.instance) {
+      locoScroll.scroll.instance.scroll.y = 0;
+    }
+    // Initialize hero animations
+    console.log("Calling initBlastoiseHero...");
+    initBlastoiseHero();
+    
+    // Refresh ScrollTrigger after animation is created
+    setTimeout(() => {
+      ScrollTrigger.refresh();
+    }, 100);
+  });
 }
 
 // Initialize entry sections independently of hero image loading
@@ -1417,6 +1377,7 @@ function canvas2(){
   
   
   
+  if (document.querySelector(".page7-cir")) {
   gsap.to(".page7-cir",{
     scrollTrigger:{
       trigger:`.page7-cir`,
@@ -1426,10 +1387,12 @@ function canvas2(){
       scrub:.5
     },
     scale:1.5
-  })
+    });
+  }
   
   
   
+  if (document.querySelector(".page7-cir-inner")) {
   gsap.to(".page7-cir-inner",{
     scrollTrigger:{
       trigger:`.page7-cir-inner`,
@@ -1439,7 +1402,8 @@ function canvas2(){
       scrub:.5
     },
     backgroundColor : `#0a3bce91`,
-  })
+    });
+  }
 
 
 // Button functionality - Initialize after page loads
