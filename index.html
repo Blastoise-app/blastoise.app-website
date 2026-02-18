@@ -13,37 +13,30 @@
 </head>
 <body>
     <div id="main" data-scroll-container>
-        <div id="page1">
+        <div id="section-hero">
             <nav>
-                <!-- <img src="assets/logo.png" alt=""> -->
                 <div id="right-nav">
-                    <!-- <button>Book a Demo</button> -->
-                    <!-- <button><i class="ri-menu-fill"></i></button> -->
                 </div>
             </nav>
-            <div class="bottom-page1">
-                 <h1>blastoise.app</h1>
-                 <div class="bottom-page1-inner">
-                    <!-- <button>LEARN MORE</button> -->
-                 </div>
-            </div>
             <div class="hero-blastoise-container">
-                <img src="assets/images/Blastoise-transparent-bg-10x.png" alt="Blastoise" id="hero-blastoise">
+                <div class="hero-image-wrapper">
+                    <img src="assets/images/Blastoise-transparent-bg-10x.png" alt="Blastoise" id="hero-blastoise">
+                    <div class="zoom-target" id="zoom-target"></div>
+                </div>
                 <div class="entry-portal" id="entry-portal"></div>
-                <div class="zoom-target" id="zoom-target"></div>
             </div>
+            <div id="hero-hide-marker" aria-hidden="true">hide threshold</div>
+            <div id="hero-ruler" aria-hidden="true"></div>
         </div>
-        <div id="page1-5-entry">
+        <div id="section-entry">
             <div class="entry-content">
-                <!-- HERO -->
-                <div class="entry-section">
+                <div id="entry-intro" class="entry-section entry-section--intro">
                     <h2>blastoise.app</h2>
-                    <p>Apps by Blastoise</p>
-                    <div class="divider">⸻</div>
+                    <p id="entry-apps-by-blastoise">Apps by Blastoise</p>
+                    <div class="divider" id="entry-intro-divider">⸻</div>
                 </div>
                 
-                <!-- Apps -->
-                <div class="entry-section entry-section--apps">
+                <div id="entry-apps" class="entry-section entry-section--apps">
                     <h2>Apps</h2>
                     <h3>Metapod</h3>
                     <p>A to-do list for procrastinators.</p>
@@ -71,117 +64,15 @@
                 </div>
             </div>
         </div>
-        <!-- COMMENTED OUT: Old content sections
-        <div id="page2">
-            <h2>Certify your building as a Digital Twin Token (DTT®)</h2>
-            <h1>The Digital Twin Token is a unique digital asset backed by property data. Magma combines your building's components and systems essential information into a DTT®.</h1>
-        </div>
-        <div id="page3">
-            <canvas></canvas>
-        </div>
-        <div id="page4">
-            <h3>Connect the Building's twin to your stakeholders</h3>
-            <h1>Users connect directly to the DTT® without any intermediaries. As Stakeholder, they have the power to upload and verify information that enriches the Digital Twin Token. A Stakeholder's ability to access validated-data to perform tasks depends on their specific role.</h1>
-        </div>
-        <div id="page5">
-            <canvas></canvas>
-        </div>
-        <div id="page6">
-            <h3>Increase your Digital Twin Token's value</h3>
-            <h1>DTT® data increases the value of your digital asset by lowering operational costs, improving energy use, assisting commercialization, and boosting the liquidity of your building.</h1>
-        </div>
-        <div id="page7">
-            <div class="page7-cir">
-                <div class="page7-cir-inner">
-
-                </div>
-            </div>
-            <canvas></canvas>
-        </div>
-        <div id="page8">
-            <div class="page8-bottom">
-                <h1>Magma DTT</h1>
-                <button>LEARN MORE</button>
-            </div>
-            <video src="https://thisismagma.com/wp-content/themes/magma/assets/home/glass/1.mp4?3" autoplay loop muted></video>
-        </div>
-        <div id="page9">
-            <div class="left9">
-                <h1>What is <br> Magma?</h1>
-            </div>
-            <div class="right9">
-                <div class="right9-center">
-
-                </div>
-            </div>
-        </div>
-        <div id="page10">
-            <div class="right10">
-                <div class="right10-inner">
-                    <h3>Web3 platform</h3>
-                    <p>Magma is a Web3 platform for all real estate stakeholders, which provides users with the ability to manage interactions between physical and digital assets through unique, and collectively generated, 3D representations of their buildings.</p>
-                </div>
-                <div class="right10-inner">
-                    <h3>The Digital Twin Token: The building's unique digital copy</h3>
-                    <p>Magma uses blockchain technology to record essential data, which enables transparent, traceable, and immutable streams of information to be readily accessible to its users. Magma smart contracts are built with this blockchain data to expedite tasks like requests for proposals, lease agreements, and services arrangements.</p>
-                </div>
-                <div class="right10-inner">
-                    <h3>An Index of digitization</h3>
-                    <p>The Magma Index provides valuable insight for decision-making regarding data-sharing, service-creating, and operational/environmental expectations.</p>
-                </div>
-            </div>
-        </div>
-        <div id="page11">
-            <h1>Recent Blog</h1>
-            <div class="page11-inner">
-                <div class="left11">
-                    <img src="https://thisismagma.com/wp-content/uploads/2024/12/thisismagma.com-magma-token-mgtn-magma-token-mgtn.jpeg">
-                </div>
-                <div class="right11">
-                    <h4>December 13, 2024</h4>
-                    <h1>Wrapping Up a Milestone: $MGTN's First Fundraising Round</h1>
-                </div>
-            </div>
-            <div class="page11-inner">
-                <div class="left11">
-                    <img src="https://thisismagma.com/wp-content/uploads/2024/12/thisismagma.com-2024-12-10-18.03.29-2024-12-10-18.03.29.png">
-                </div>
-                <div class="right11">
-                    <h4>December 10, 2024</h4>
-                    <h1>Magma and Groupe Colombus: a strategic alliance to digitize the real estate industry</h1>
-                </div>
-            </div>
-            <div class="page11-inner">
-                <div class="left11">
-                    <img src="https://thisismagma.com/wp-content/uploads/2024/12/thisismagma.com-magma-launches-in-the-uae-introducing-the-future-of-real-estate-magma-logo.png">
-                </div>
-                <div class="right11">
-                    <h4>December 10, 2024</h4>
-                    <h1>Magma Launches in the UAE: Introducing the Future of Real Estate</h1>
-                </div>
-            </div>
-        </div>
-        <div id="page12">
-            <div class="page12-inner">
-                <h1>Featured In</h1>
-                <p>Thrilled to have been featured in several prominent media <br> outlets and leading professionals across the world's best <br> real estate and web3 institutions.</p>
-            </div>
-        </div>
-        <div id="page13">
-            <h1>Become an <br> early adopter</h1>
-            <button>BOOK A DEMO</button>
-        </div>
-        -->
-        <!-- FOOTER -->
-        <div id="page14">
-            <div class="page14-inner">
+        <div id="section-social">
+            <div class="section-social-row">
                 <a href="https://x.com" target="_blank" rel="noopener noreferrer">
                     <h1><i class="ri-twitter-x-line"></i></h1>
                     <i class="ri-arrow-right-up-line"></i>
                 </a>
                 <div class="center14"></div>
             </div>
-            <div class="page14-inner">
+            <div class="section-social-row">
                 <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer">
                     <h1>LinkedIn</h1>
                     <i class="ri-arrow-right-up-line"></i>
@@ -189,14 +80,20 @@
                 <div class="center14"></div>
             </div>
         </div>
-        <div id="page15">
-            <div class="page14-inner footer-links">
+        <div id="section-footer">
+            <div class="section-social-row footer-links">
                 <p>© 2026 Blastoise, LLC</p>
                 <a href="https://forms.gle/u1zc2hMNyhtBZuaF7" target="_blank" rel="noopener noreferrer">Contact</a>
                 <a href="#privacy" target="_blank" rel="noopener noreferrer">Privacy</a>
             </div>           
         </div>
     </div>
+    <div id="hero-title-overlay" aria-label="Hero title">
+        <h1>blastoise.app</h1>
+    </div>
+    <div id="hero-debug-status" aria-live="polite">hero debug: initializing...</div>
+    <div id="entry-debug-status" aria-live="polite">entry: initializing...</div>
+    <div id="viewport-zero-line" aria-hidden="true"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/locomotive-scroll@3.5.4/dist/locomotive-scroll.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha512-7eHRwcbYkK4d9g/6tD/mhkf++eoTHwpNM9woBxtPUBWm67zeAfFC+HrdoE2GanKeocly/VxeLvIqwvCdk7qScg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>

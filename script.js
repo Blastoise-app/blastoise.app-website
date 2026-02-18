@@ -1,5 +1,8 @@
 // Global locomotive scroll instance
 let locoScroll;
+if ("scrollRestoration" in history) {
+  history.scrollRestoration = "manual";
+}
 
 function loco(){
     gsap.registerPlugin(ScrollTrigger);
@@ -31,8 +34,9 @@ setTimeout(() => {
       smooth: true,
       multiplier: 1,
       class: "is-revealed",
-      smoothMobile: false,
-      resetNativeScroll: false, // Keep native scroll disabled for Locomotive Scroll
+      smoothMobile: true,
+      // Always boot from top so ScrollTrigger progress starts at 0.
+      resetNativeScroll: true,
       inertia: 0.5 // Add some inertia for smoother feel
     });
     
@@ -68,12 +72,12 @@ setTimeout(() => {
     setTimeout(() => {
       const heroBlastoise = document.querySelector("#hero-blastoise");
       const heroContainer = document.querySelector(".hero-blastoise-container");
-      const page1 = document.querySelector("#page1");
+      const heroSection = document.querySelector("#section-hero");
       
-      // Ensure page1 is marked as a scroll section
+      // Ensure hero section is marked as a scroll section
       // Remove data-scroll attributes that interfere with ScrollTrigger
-      if (page1) {
-        page1.removeAttribute("data-scroll-section");
+      if (heroSection) {
+        heroSection.removeAttribute("data-scroll-section");
       }
       if (heroBlastoise) {
         heroBlastoise.removeAttribute("data-scroll");
@@ -90,14 +94,21 @@ setTimeout(() => {
       }
     }, 100);
     
-    // Immediately scroll to top after initialization - do this multiple times
-    locoScroll.scrollTo(0, { duration: 0, disableLerp: true });
-    
-    // Also force scroll position via the scroll instance directly
-    if (locoScroll.scroll && locoScroll.scroll.instance) {
-      locoScroll.scroll.instance.scroll.y = 0;
-      locoScroll.scroll.instance.scroll.x = 0;
-    }
+    // Aggressively pin startup scroll position to 0 to avoid restored-progress fade.
+    const forceTop = () => {
+      mainEl.scrollTop = 0;
+      window.scrollTo(0, 0);
+      locoScroll.scrollTo(0, { duration: 0, disableLerp: true });
+      if (locoScroll.scroll && locoScroll.scroll.instance) {
+        locoScroll.scroll.instance.scroll.y = 0;
+        locoScroll.scroll.instance.scroll.x = 0;
+      }
+      ScrollTrigger.update();
+    };
+    forceTop();
+    setTimeout(forceTop, 80);
+    setTimeout(forceTop, 220);
+    setTimeout(forceTop, 500);
     
     // CRITICAL: Watch for Locomotive Scroll ready event and ensure #main is visible
     locoScroll.on("ready", () => {
@@ -105,6 +116,14 @@ setTimeout(() => {
       mainEl.style.setProperty("pointer-events", "auto", "important");
       console.log("Locomotive Scroll ready - forced #main to be visible");
     });
+
+    // Select pin behavior from the active runtime mode.
+    // Locomotive smooth mode uses transforms; native mode needs fixed pinning.
+    const proxyPinType = (
+      (getComputedStyle(mainEl).transform && getComputedStyle(mainEl).transform !== "none") ||
+      !!locoScroll?.options?.smooth ||
+      !!locoScroll?.options?.smoothMobile
+    ) ? "transform" : "fixed";
 
     // tell ScrollTrigger to use these proxy methods for the "#main" element since Locomotive Scroll is hijacking things
     ScrollTrigger.scrollerProxy("#main", {
@@ -130,18 +149,26 @@ setTimeout(() => {
       getBoundingClientRect() {
         // Return viewport dimensions - #main is the viewport container
         // For custom scrollers, this should represent the viewport
+        // Use actual viewport dimensions for proper mobile support
+        const vh = window.innerHeight || document.documentElement.clientHeight;
+        const vw = window.innerWidth || document.documentElement.clientWidth;
         return {
           top: 0,
           left: 0,
-          width: window.innerWidth,
-          height: window.innerHeight
+          width: vw,
+          height: vh
         };
       },
-      pinType: "transform"
+      pinType: proxyPinType
     });
-    
-    // CRITICAL: Force ScrollTrigger to refresh after proxy is set up
-    ScrollTrigger.refresh();
+    let didInitialProxyRefresh = false;
+    const runInitialProxyRefresh = () => {
+      if (didInitialProxyRefresh) {
+        return;
+      }
+      didInitialProxyRefresh = true;
+      ScrollTrigger.refresh();
+    };
 
     // each time the window updates, we should refresh ScrollTrigger and then update LocomotiveScroll. 
     ScrollTrigger.addEventListener("refresh", () => {
@@ -166,6 +193,7 @@ setTimeout(() => {
 
     // Single scroll update path: Locomotive drives ScrollTrigger.
     locoScroll.on("scroll", (e) => {
+      // Always update ScrollTrigger when Locomotive Scroll fires scroll event
       ScrollTrigger.update();
     });
     
@@ -173,21 +201,17 @@ setTimeout(() => {
     setTimeout(() => {
       if (locoScroll) {
         locoScroll.update();
-        ScrollTrigger.refresh();
       }
     }, 200);
     
     setTimeout(() => {
       if (locoScroll) {
         locoScroll.update();
-        ScrollTrigger.refresh();
+        runInitialProxyRefresh();
       }
     }, 500);
   }
 }, 100);
-
-// Initial ScrollTrigger refresh
-ScrollTrigger.refresh();
 
 }
 loco()
@@ -196,12 +220,62 @@ loco()
 function initBlastoiseHero() {
   const heroBlastoise = document.querySelector("#hero-blastoise");
   const entryPortal = document.querySelector("#entry-portal");
-  const page1 = document.querySelector("#page1");
+  const heroSection = document.querySelector("#section-hero");
+  const heroRuler = document.querySelector("#hero-ruler");
+  const heroHideMarker = document.querySelector("#hero-hide-marker");
+  const heroDebugStatus = document.querySelector("#hero-debug-status");
+  const hideThreshold = 1;
+  const ensureBottomTitleVisible = () => {
+    const heroTitleOverlayEl = document.querySelector("#hero-title-overlay");
+    if (!heroTitleOverlayEl) {
+      return;
+    }
+    heroTitleOverlayEl.style.opacity = "1";
+    heroTitleOverlayEl.style.setProperty("visibility", "visible", "important");
+    heroTitleOverlayEl.style.setProperty("display", "flex", "important");
+    heroTitleOverlayEl.style.setProperty("transform", "none", "important");
+  };
   
-  if (!heroBlastoise || !entryPortal || !page1) {
-    console.warn("Blastoise hero elements not found", {heroBlastoise, entryPortal, page1});
+  if (!heroBlastoise || !entryPortal || !heroSection) {
+    console.warn("Blastoise hero elements not found", {heroBlastoise, entryPortal, heroSection});
     return;
   }
+
+  const renderHeroRuler = () => {
+    if (!heroSection || !heroRuler) {
+      return;
+    }
+    const sectionHeight = heroSection.offsetHeight;
+    heroRuler.innerHTML = "";
+    for (let offset = 0; offset <= sectionHeight; offset += 100) {
+      const line = document.createElement("div");
+      line.className = "hero-ruler-line";
+      line.style.top = `${offset}px`;
+      const label = document.createElement("span");
+      label.textContent = `${offset}px`;
+      line.appendChild(label);
+      heroRuler.appendChild(line);
+    }
+  };
+
+  const updateHeroDebugStatus = (progress, isHidden) => {
+    if (!heroDebugStatus) {
+      return;
+    }
+    const clampedProgress = Math.max(0, Math.min(1, progress));
+    const progressText = clampedProgress.toFixed(3);
+    const stateText = isHidden ? "HIDDEN" : "VISIBLE";
+    heroDebugStatus.textContent = `hero ${stateText} | progress ${progressText} | hide @ ${hideThreshold}`;
+    heroDebugStatus.style.borderColor = isHidden ? "rgba(255, 59, 48, 0.9)" : "rgba(57, 255, 20, 0.8)";
+    heroDebugStatus.style.color = isHidden ? "#ff3b30" : "#39ff14";
+  };
+
+  if (heroHideMarker) {
+    heroHideMarker.style.top = `${hideThreshold * 100}%`;
+    heroHideMarker.textContent = `hide threshold (${Math.round(hideThreshold * 100)}%)`;
+  }
+  renderHeroRuler();
+  updateHeroDebugStatus(0, false);
 
   // Verify Locomotive Scroll is ready - wait a bit if not ready
   if (!locoScroll) {
@@ -224,14 +298,17 @@ function initBlastoiseHero() {
       return;
     }
 
-    const container = heroBlastoise.parentElement; // hero-blastoise-container
+    const wrapper = heroBlastoise.parentElement; // hero-image-wrapper
+    const container = wrapper.parentElement; // hero-blastoise-container
     const containerRect = container.getBoundingClientRect();
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const imageRect = heroBlastoise.getBoundingClientRect();
     
     // Get image natural dimensions
     const naturalWidth = heroBlastoise.naturalWidth;
     const naturalHeight = heroBlastoise.naturalHeight;
     
-    if (naturalWidth === 0 || naturalHeight === 0) {
+    if (naturalWidth === 0 || naturalHeight === 0 || wrapperRect.width === 0 || wrapperRect.height === 0) {
       console.warn("Image not loaded yet, retrying...");
       setTimeout(positionZoomTarget, 100);
       return;
@@ -253,8 +330,6 @@ function initBlastoiseHero() {
     }
     
     // Calculate image offset from container (accounting for actual object-position)
-    // object-position: X% Y% means the point at X% of the image aligns with X% of the container
-    // So left edge of image = containerWidth * X - imageWidth * X
     const computedObjectPosition = getComputedStyle(heroBlastoise).objectPosition || "50% 50%";
     const [posXRaw, posYRaw = "50%"] = computedObjectPosition.split(" ");
     const parseObjectPosition = (value, fallback) => {
@@ -274,67 +349,88 @@ function initBlastoiseHero() {
     const imageOffsetY = containerRect.height * objectPositionY - displayedHeight * objectPositionY;
     
     // Target position as a percentage of the displayed image dimensions
-    // These values need to be calibrated based on where the black spot actually is
-    // The black spot is in the black space under the left cannon
-    // Based on visual inspection, it's approximately:
-    // - Around 30-35% from the left edge of the displayed image
-    // - Around 45-50% from the top edge of the displayed image
-    // We'll start with conservative estimates and adjust
+    const targetPercentX = 0.3765; // Calibrated shell opening target (responsive-safe baseline)
+    const targetPercentY = 0.408; // Calibrated shell opening target (responsive-safe baseline)
     
-    // Zoom target position: image-relative percentages
-    const targetPercentX = 0.3765; // 37.65% from left of image (half the last move)
-    const targetPercentY = 0.408; // 40.8% from top of image (keep Y position)
-    
-    // Calculate pixel position relative to displayed image
+    // Calculate pixel position relative to displayed image content
     const targetOffsetX = displayedWidth * targetPercentX;
     const targetOffsetY = displayedHeight * targetPercentY;
     
-    // Position relative to container (accounting for image centering)
-    // Center the zoom-target box on the target point
-    const targetX = imageOffsetX + targetOffsetX - (zoomTarget.offsetWidth / 2);
-    const targetY = imageOffsetY + targetOffsetY - (zoomTarget.offsetHeight / 2);
+    // Position relative to container (where displayed image content actually is)
+    const targetXInContainer = imageOffsetX + targetOffsetX;
+    const targetYInContainer = imageOffsetY + targetOffsetY;
     
-    // Ensure position is within bounds
-    const finalX = Math.max(0, Math.min(targetX, containerRect.width - zoomTarget.offsetWidth));
-    const finalY = Math.max(0, Math.min(targetY, containerRect.height - zoomTarget.offsetHeight));
+    // Convert container-relative position to wrapper-relative percentage
+    // The wrapper is the same size as the container and centered
+    const targetXRelativeToWrapper = targetXInContainer - (wrapperRect.left - containerRect.left);
+    const targetYRelativeToWrapper = targetYInContainer - (wrapperRect.top - containerRect.top);
     
-    // Set position
-    zoomTarget.style.left = `${finalX}px`;
-    zoomTarget.style.top = `${finalY}px`;
+    // Convert to percentage of wrapper dimensions (which match image element dimensions)
+    const percentX = (targetXRelativeToWrapper / wrapperRect.width) * 100;
+    const percentY = (targetYRelativeToWrapper / wrapperRect.height) * 100;
+    
+    // Set position as percentage relative to wrapper (which will scale with image)
+    zoomTarget.style.left = `${Math.max(0, Math.min(100, percentX))}%`;
+    zoomTarget.style.top = `${Math.max(0, Math.min(100, percentY))}%`;
     
     console.log("Zoom target positioned:", {
       containerSize: { width: containerRect.width, height: containerRect.height },
+      wrapperSize: { width: wrapperRect.width, height: wrapperRect.height },
       displayedImageSize: { width: displayedWidth, height: displayedHeight },
       imageOffset: { x: imageOffsetX, y: imageOffsetY },
       targetPercent: { x: targetPercentX, y: targetPercentY },
-      targetPosition: { x: finalX, y: finalY },
+      targetPositionPercent: { x: percentX, y: percentY },
       naturalDimensions: { width: naturalWidth, height: naturalHeight }
     });
   }
   
-  // Function to calculate image-relative transform origin percentage
-  // Returns percentages relative to the image itself (not screen coordinates)
+  // Function to calculate wrapper-relative transform origin percentage
+  // Returns percentages relative to the wrapper element (which we're scaling)
+  // Uses the zoom-target's CSS position directly (since it's positioned as percentages)
   function calculateImageRelativeTransformOrigin() {
     const zoomTarget = document.querySelector("#zoom-target");
-    if (!zoomTarget) {
-      // Fallback: use calibrated position in black space under left cannon
-      return "38.1% 40.8%";
+    if (!zoomTarget || !heroBlastoise) {
+      // Fallback: use calibrated position
+      return "37.65% 40.8%";
     }
     
-    // Get image's actual displayed dimensions (getBoundingClientRect accounts for object-position)
-    const imageRect = heroBlastoise.getBoundingClientRect();
+    // The zoom-target is positioned as percentages relative to the wrapper
+    // Since it has transform: translate(-50%, -50%), its center is at the left/top position
+    // So we can use those percentages directly as the transform origin
+    const leftPercent = parseFloat(zoomTarget.style.left) || 0;
+    const topPercent = parseFloat(zoomTarget.style.top) || 0;
+    
+    // If the zoom-target hasn't been positioned yet, use fallback
+    if (leftPercent === 0 && topPercent === 0 && !zoomTarget.style.left && !zoomTarget.style.top) {
+      return "37.65% 40.8%";
+    }
+    
+    return `${leftPercent}% ${topPercent}%`;
+  }
+
+  // Move the zoom target to viewport center during the zoom so it feels like
+  // the camera is entering the shell instead of only scaling in place.
+  function calculateCenteringTranslation() {
+    const zoomTarget = document.querySelector("#zoom-target");
+    const heroWrapperEl = heroBlastoise.parentElement;
+    if (!zoomTarget || !heroWrapperEl) {
+      return { x: 0, y: 0 };
+    }
+
     const targetRect = zoomTarget.getBoundingClientRect();
-    
-    // Calculate target center relative to image element's bounding box
-    const targetCenterX = targetRect.left + targetRect.width / 2 - imageRect.left;
-    const targetCenterY = targetRect.top + targetRect.height / 2 - imageRect.top;
-    
-    // Convert to percentage relative to image element dimensions
-    // This is image-relative, not screen-relative
-    const originX = (targetCenterX / imageRect.width) * 100;
-    const originY = (targetCenterY / imageRect.height) * 100;
-    
-    return `${Math.max(0, Math.min(100, originX))}% ${Math.max(0, Math.min(100, originY))}%`;
+    if (!targetRect.width || !targetRect.height) {
+      return { x: 0, y: 0 };
+    }
+
+    const targetCenterX = targetRect.left + targetRect.width / 2;
+    const targetCenterY = targetRect.top + targetRect.height / 2;
+    const viewportCenterX = window.innerWidth / 2;
+    const viewportCenterY = window.innerHeight / 2;
+
+    return {
+      x: viewportCenterX - targetCenterX,
+      y: viewportCenterY - targetCenterY
+    };
   }
   
   // Position zoom-target initially and on resize
@@ -343,33 +439,12 @@ function initBlastoiseHero() {
     positionZoomTarget();
   });
   
-  // Position bottom-page1 text to stay under Blastoise image
+  // Position hero title overlay text - DISABLED: text stays fixed, only fades
+  // Text is now position: fixed with bottom: 8%, so it doesn't move
   function positionBottomText() {
-    const bottomPage1 = document.querySelector(".bottom-page1");
-    const heroBlastoise = document.querySelector("#hero-blastoise");
-    const page1 = document.querySelector("#page1");
-    
-    if (!bottomPage1 || !heroBlastoise || !page1) {
-      return;
-    }
-    
-    // Get image's actual displayed dimensions and position
-    const imageRect = heroBlastoise.getBoundingClientRect();
-    const page1Rect = page1.getBoundingClientRect();
-    
-    // Calculate where the bottom of the image is relative to page1
-    const imageBottomRelativeToPage1 = imageRect.bottom - page1Rect.top;
-    
-    // Position text just below the image (with some padding)
-    // But ensure it doesn't go below minimum from bottom of viewport
-    // Use higher minimum on mobile (25%) vs desktop (8%)
-    const isMobile = window.innerWidth <= 640;
-    const minBottomPercent = isMobile ? 0.25 : 0.08; // 25% on mobile, 8% on desktop
-    const minBottom = page1Rect.height * minBottomPercent;
-    const desiredBottom = page1Rect.height - imageBottomRelativeToPage1 + 20; // 20px padding below image
-    const finalBottom = Math.max(minBottom, desiredBottom);
-    
-    bottomPage1.style.bottom = `${finalBottom}px`;
+    // Do nothing - text position is fixed via CSS
+    // This function is kept for compatibility but doesn't move the text
+    return;
   }
   
   // Position text initially and on resize
@@ -385,9 +460,12 @@ function initBlastoiseHero() {
   // Also update position during scroll (in case image moves)
   ScrollTrigger.addEventListener("refresh", positionBottomText);
   
+  // Get the wrapper element (contains both image and zoom-target)
+  const heroWrapper = heroBlastoise.parentElement; // hero-image-wrapper
+  
   // Set initial state with image-relative transform origin
   const initialTransformOrigin = calculateImageRelativeTransformOrigin();
-  gsap.set(heroBlastoise, {
+  gsap.set(heroWrapper, {
     scale: 1,
     x: 0,
     y: 0,
@@ -400,82 +478,201 @@ function initBlastoiseHero() {
   // Set up scroll-zoom animation immediately
   setTimeout(() => {
     // Verify elements exist
-    if (!page1 || !heroBlastoise) {
+    if (!heroSection || !heroBlastoise) {
       console.error("Missing elements for animation setup!");
       return;
     }
     
-    // Recalculate transform origin to ensure it's accurate
-    const transformOrigin = calculateImageRelativeTransformOrigin();
-    gsap.set(heroBlastoise, { transformOrigin: transformOrigin, force3D: true });
-    console.log("Animation transform origin (image-relative):", transformOrigin);
-    
-    // Determine final zoom level - much more zoom on mobile to avoid showing brown shell
+    // Determine final zoom level.
     const isMobile = window.innerWidth <= 640;
-    const finalScale = isMobile ? 95 * 10 : 95; // 950x on mobile, 95x on desktop
+    const finalScale = isMobile ? 180 : 90;
+    
+    // Get the wrapper element (contains both image and zoom-target)
+    const heroWrapper = heroBlastoise.parentElement; // hero-image-wrapper
+    const heroContainerEl = document.querySelector(".hero-blastoise-container");
+    
+    // Calculate translation once at start (before scaling) based on initial dimensions
+    // We'll use transform-origin at the pink square AND translate to center it
+    const transformOrigin = calculateImageRelativeTransformOrigin();
+    
+    // Set transform origin to zoom around the pink square
+    gsap.set(heroWrapper, { 
+      transformOrigin: transformOrigin, 
+      force3D: true,
+      scale: 1,
+      x: 0,
+      y: 0
+    });
+
+    // Ensure zoom target is positioned and then calculate a screen-accurate
+    // translation to place the target center at viewport center.
+    positionZoomTarget();
+    const initialTranslation = calculateCenteringTranslation();
+    console.log("Animation transform origin (image-relative):", transformOrigin);
+    console.log("Initial translation calculated:", initialTranslation);
+    console.log("Hero wrapper element:", heroWrapper);
+    console.log("Final scale:", finalScale);
     
     // Create zoom animation using normalized scroll progress (0 → 1)
     // Animation progresses based on how far user scrolls through the section
-    // NO x/y translations - zoom happens at transform-origin point (image-relative)
-    let zoomAnimation;
-    // Calculate end distance - ensure it's always positive and meaningful
-    const calculateEndDistance = () => {
-      const height = page1.offsetHeight || window.innerHeight;
-      const distance = height * 1.5;
-      // Ensure minimum distance to prevent collapse
-      return Math.max(distance, window.innerHeight * 0.5);
+    // Scale the wrapper so both image and zoom-target scale together
+    // Translate to center the pink target as we zoom
+    const heroTitleOverlay = document.querySelector("#hero-title-overlay");
+    const setHeroVisibilityAtMaxZoom = (shouldHide) => {
+      if (shouldHide) {
+        heroSection.style.setProperty("opacity", "0", "important");
+        heroSection.style.setProperty("visibility", "hidden", "important");
+        heroSection.style.pointerEvents = "none";
+        if (heroContainerEl) {
+          heroContainerEl.style.setProperty("opacity", "0", "important");
+          heroContainerEl.style.setProperty("visibility", "hidden", "important");
+          heroContainerEl.style.pointerEvents = "none";
+        }
+        if (heroTitleOverlay) {
+          heroTitleOverlay.style.setProperty("opacity", "0", "important");
+          heroTitleOverlay.style.setProperty("visibility", "hidden", "important");
+        }
+        return;
+      }
+      heroSection.style.setProperty("opacity", "1", "important");
+      heroSection.style.setProperty("visibility", "visible", "important");
+      heroSection.style.pointerEvents = "none";
+      if (heroContainerEl) {
+        heroContainerEl.style.setProperty("opacity", "1", "important");
+        heroContainerEl.style.setProperty("visibility", "visible", "important");
+        heroContainerEl.style.pointerEvents = "none";
+      }
+      if (heroTitleOverlay) {
+        heroTitleOverlay.style.setProperty("opacity", "1", "important");
+        heroTitleOverlay.style.setProperty("visibility", "visible", "important");
+      }
     };
-    
-    zoomAnimation = gsap.to(heroBlastoise, {
-      scale: finalScale, // Final zoom level (475x on mobile, 95x on desktop)
-      // NO x/y translations - zoom happens at transform-origin point
+    const setHeroBackgroundByProgress = (progress) => {
+      const handoffProgress = gsap.utils.clamp(0, 1, (progress - 0.9) / 0.1);
+      const bgColor = gsap.utils.interpolate("#2d0000", "#000000", handoffProgress);
+      heroSection.style.backgroundColor = bgColor;
+      if (heroContainerEl) {
+        heroContainerEl.style.setProperty("background-color", bgColor, "important");
+      }
+    };
+    if (heroTitleOverlay) {
+      gsap.set(heroTitleOverlay, { opacity: 1, x: 0, y: 0 });
+    }
+    ensureBottomTitleVisible();
+    let zoomAnimation;
+    zoomAnimation = gsap.to(heroWrapper, {
+      scale: finalScale,
+      x: initialTranslation.x,
+      y: initialTranslation.y,
       ease: "none", // No easing for direct scroll-to-scale mapping
       force3D: true, // Enable GPU acceleration for smoother performance
       scrollTrigger: {
-        trigger: page1,
+        trigger: heroSection, // Trigger on the scrolling section
         start: "top top", // When section enters viewport
         end: () => {
-          const distance = calculateEndDistance();
-          console.log("Calculating end distance:", distance, "page1 height:", page1.offsetHeight);
-          return `+=${distance}`;
-        }, // End after scrolling 1.5x section height for smooth, slow zoom
-        scrub: 1.5, // Responsive while still smoothing wheel spikes.
+          // Keep pinning active for the full hero section so onLeave lines up
+          // with the real end of #section-hero.
+          const heroSectionHeight = heroSection.offsetHeight;
+          console.log("Calculating end - heroSectionHeight:", heroSectionHeight, "scrollDistance:", heroSectionHeight);
+          return `+=${heroSectionHeight}`;
+        },
+        scrub: true, // Use direct scroll binding; Locomotive remains the only smoother.
         pin: true,
-        pinSpacing: true,
+        pinSpacing: false,
+        anticipatePin: 1,
         scroller: scroller,
         invalidateOnRefresh: true,
         markers: false, // Set to true for debugging
-        anticipatePin: 1, // Help ScrollTrigger anticipate pinning
         onUpdate: function(self) {
-          // Debug: log progress to verify animation is updating
-          if (self.progress > 0 && self.progress < 0.1) {
-            console.log("Zoom animation progress:", self.progress, "scale:", gsap.getProperty(heroBlastoise, "scale"));
+          const rawProgress = (self && typeof self.progress === "number" && Number.isFinite(self.progress))
+            ? self.progress
+            : 0;
+          const p = Math.max(0, Math.min(1, rawProgress));
+          if (heroContainerEl) {
+            heroContainerEl.style.zIndex = "20";
           }
-          const heroContainer = document.querySelector(".hero-blastoise-container");
-          if (heroContainer) {
-            heroContainer.style.zIndex = self.progress > 0.2 ? "30" : "20";
+          if (heroTitleOverlay) {
+            const fadeStart = 0.72;
+            const fadeProgress = p <= fadeStart
+              ? 0
+              : (p - fadeStart) / (1 - fadeStart);
+            const titleOpacity = Math.max(0, Math.min(1, 1 - fadeProgress));
+            gsap.set(heroTitleOverlay, { opacity: titleOpacity, x: 0, y: 0 });
           }
+          setHeroBackgroundByProgress(p);
+          setHeroVisibilityAtMaxZoom(false);
+          updateHeroDebugStatus(p, false);
         },
         onEnter: function() {
+          setHeroVisibilityAtMaxZoom(false);
+          setHeroBackgroundByProgress(0);
+          updateHeroDebugStatus(0, false);
           console.log("Zoom animation entered - start:", this.start, "end:", this.end);
+          // Ensure hero container is visible when animation starts
+          if (heroContainerEl) {
+            heroContainerEl.style.opacity = "1";
+            heroContainerEl.style.visibility = "visible";
+            heroContainerEl.style.zIndex = "20";
+          }
+          const heroTitleOverlay = document.querySelector("#hero-title-overlay");
+          if (heroTitleOverlay) {
+            gsap.set(heroTitleOverlay, { opacity: 1, x: 0, y: 0 });
+          }
+          ensureBottomTitleVisible();
+        },
+        onLeave: function() {
+          // Max zoom reached: hide hero layer and hand off to entry section.
+          console.log("HERO onLeave FIRED");
+          setHeroVisibilityAtMaxZoom(true);
+          setHeroBackgroundByProgress(1);
+          updateHeroDebugStatus(1, true);
+          if (playEntryReveal) {
+            playEntryReveal();
+          }
+        },
+        onEnterBack: function() {
+          // Returning from entry: show hero and reset entry handoff state.
+          setHeroVisibilityAtMaxZoom(false);
+          setHeroBackgroundByProgress(0.98);
+          updateHeroDebugStatus(hideThreshold, false);
         },
         // Recalculate everything on resize for full responsiveness
         onRefresh: function(self) {
           const newOrigin = calculateImageRelativeTransformOrigin();
-          gsap.set(heroBlastoise, { transformOrigin: newOrigin, force3D: true });
+          const heroWrapper = heroBlastoise.parentElement; // hero-image-wrapper
+          gsap.set(heroWrapper, {
+            transformOrigin: newOrigin,
+            force3D: true,
+            scale: 1,
+            x: 0,
+            y: 0
+          });
           positionZoomTarget(); // Reposition debug box
-          // Recalculate scale for mobile/desktop on resize
-          const isMobileNow = window.innerWidth <= 640;
-          const newFinalScale = isMobileNow ? 95 * 10 : 95;
+          // Recalculate translation for new dimensions
+          const newTranslation = calculateCenteringTranslation();
           if (zoomAnimation) {
-          zoomAnimation.vars.scale = newFinalScale;
+            zoomAnimation.vars.x = newTranslation.x;
+            zoomAnimation.vars.y = newTranslation.y;
+          }
+          // Recalculate scale for mobile/desktop on resize
+          // Use more reliable mobile detection
+          const isMobileNow = window.innerWidth <= 640 || 
+                             (window.matchMedia && window.matchMedia('(max-width: 640px)').matches);
+          const newFinalScale = isMobileNow ? 180 : 90;
+          if (zoomAnimation) {
+            zoomAnimation.vars.scale = newFinalScale;
+            zoomAnimation.invalidate();
           }
           if (self && self.start !== undefined && self.end !== undefined) {
-            console.log("Zoom animation refreshed - start:", self.start, "end:", self.end, "distance:", calculateEndDistance());
+            console.log("Zoom animation refreshed - start:", self.start, "end:", self.end, "mobile:", isMobileNow);
             // Validate end is positive
             if (self.end <= self.start) {
               console.error("Invalid ScrollTrigger end value - end must be > start");
             }
+          }
+          renderHeroRuler();
+          if (heroHideMarker) {
+            heroHideMarker.style.top = `${hideThreshold * 100}%`;
           }
         },
       }
@@ -484,8 +681,8 @@ function initBlastoiseHero() {
     // Reset text/image layering when the zoom trigger is recreated.
     const heroContainer = document.querySelector(".hero-blastoise-container");
     if (heroContainer) {
-            heroContainer.style.zIndex = "20";
-          }
+      heroContainer.style.zIndex = "20";
+    }
     
     console.log("Zoom animation created:", zoomAnimation);
     console.log("ScrollTrigger instance:", zoomAnimation.scrollTrigger);
@@ -496,7 +693,7 @@ function initBlastoiseHero() {
       clearTimeout(resizeTimeout);
       resizeTimeout = setTimeout(() => {
         const newOrigin = calculateImageRelativeTransformOrigin();
-        gsap.set(heroBlastoise, { transformOrigin: newOrigin, force3D: true });
+        gsap.set(heroWrapper, { transformOrigin: newOrigin, force3D: true });
         console.log("Transform origin updated on resize:", newOrigin);
         ScrollTrigger.refresh();
       }, 250);
@@ -508,7 +705,6 @@ function initBlastoiseHero() {
 
 // Flags to prevent multiple initializations
 let blastoiseHeroInitialized = false;
-let entrySectionsInitialized = false;
 
 // Initialize Blastoise hero AFTER Locomotive Scroll is fully set up
 // Use a more reliable initialization approach
@@ -562,910 +758,121 @@ function initializeBlastoiseHeroWhenReady() {
     locoScroll.start();
     locoScroll.update();
   }
+  const heroTitleOverlay = document.querySelector("#hero-title-overlay");
+  if (heroTitleOverlay) {
+    gsap.set(heroTitleOverlay, { opacity: 1, x: 0, y: 0 });
+  }
   
-  // Wait for scroll position to settle before creating ScrollTrigger
-  requestAnimationFrame(() => {
-    // Double-check scroll is at 0
-    if (locoScroll && locoScroll.scroll && locoScroll.scroll.instance) {
-      locoScroll.scroll.instance.scroll.y = 0;
-    }
-    // Initialize hero animations
-    console.log("Calling initBlastoiseHero...");
-    initBlastoiseHero();
-    
-    // Refresh ScrollTrigger after animation is created
-    setTimeout(() => {
-      ScrollTrigger.refresh();
-    }, 100);
-  });
+  // Initialize hero animations immediately - ScrollTrigger will handle timing
+  console.log("Calling initBlastoiseHero...");
+  initBlastoiseHero();
+
+  // Entry section: fade in from center with scroll frozen
+  initEntryReveal();
 }
 
-// Initialize entry sections independently of hero image loading
-function initializeEntrySectionsWhenReady() {
-  if (entrySectionsInitialized) {
+// Entry section: Phase 1 scroll-driven (intro), Phase 2 time-based (apps)
+let playEntryReveal = null;
+function initEntryReveal() {
+  const introEl = document.querySelector("#entry-intro");
+  const appsByBlastoiseEl = document.querySelector("#entry-apps-by-blastoise");
+  const introDividerEl = document.querySelector("#entry-intro-divider");
+  const introH2El = introEl ? introEl.querySelector("h2") : null;
+  const appsEl = document.querySelector("#entry-apps");
+  const entrySection = document.querySelector("#section-entry");
+  const entryDebugStatus = document.querySelector("#entry-debug-status");
+
+  const updateEntryDebugStatus = (state, detail = "") => {
+    if (!entryDebugStatus) return;
+    const text = detail ? `entry ${state} | ${detail}` : `entry ${state}`;
+    entryDebugStatus.textContent = text;
+    const isComplete = state === "COMPLETE";
+    entryDebugStatus.style.borderColor = isComplete ? "rgba(57, 255, 20, 0.8)" : "rgba(0, 174, 255, 0.8)";
+    entryDebugStatus.style.color = isComplete ? "#39ff14" : "#00aeff";
+  };
+
+  if (!introEl || !appsByBlastoiseEl || !introDividerEl || !appsEl || !locoScroll || !entrySection) {
+    updateEntryDebugStatus("ERROR", "elements missing");
     return;
   }
 
-  if (!locoScroll) {
-    console.log("Waiting for Locomotive Scroll for entry sections...");
-    setTimeout(initializeEntrySectionsWhenReady, 100);
-    return;
-  }
+  updateEntryDebugStatus("WAITING", "scroll frozen until hero onLeave");
+  // Hide parent containers so individual children cannot flash visible.
+  // CSS also sets .entry-section--intro { opacity: 0 } as a pre-JS safety net.
+  gsap.set([introEl, appsEl], { opacity: 0, overwrite: true });
 
-  entrySectionsInitialized = true;
-  initEntrySections();
-}
-
-// Animate entry sections to reveal them on scroll
-function initEntrySections() {
-  const entrySections = document.querySelectorAll(".entry-section");
-  const scroller = "#main";
-  
-  if (entrySections.length === 0) {
-    console.warn("No entry sections found");
-    return;
-  }
-  
-  console.log(`Found ${entrySections.length} entry sections`);
-  
-  // Find "Enter the Shell" section by heading text (may not exist)
-  const enterShellSection = Array.from(entrySections).find((section) => {
-    const heading = section.querySelector("h2");
-    return heading && heading.textContent.trim() === "Enter the Shell";
-  });
-  const otherSections = enterShellSection
-    ? Array.from(entrySections).filter((section) => section !== enterShellSection)
-    : Array.from(entrySections);
-  
-  const bottomPage1 = document.querySelector(".bottom-page1");
-
-  // Fade out the "blastoise.app" text when the entry content starts
-  // This keeps the hero text visible until the next section is reached
-  if (bottomPage1) {
-    const entryContainer = document.querySelector("#page1-5-entry");
-    if (entryContainer) {
-      ScrollTrigger.create({
-        trigger: entryContainer,
-        scroller: scroller,
-        start: "top bottom",
-        end: "top center",
-        scrub: true,
-        onUpdate: (self) => {
-          gsap.to(bottomPage1, {
-            opacity: 1 - self.progress,
-            duration: 0.1,
-            ease: "none"
-          });
-        }
-      });
+  // Capturing scroll blocker — fires before Locomotive sees any wheel/touch input.
+  const _blockScroll = (e) => {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  };
+  const hardLockScroll = () => {
+    locoScroll.stop();
+    if (locoScroll.scroll && locoScroll.scroll.instance) {
+      locoScroll.scroll.instance.delta.y = locoScroll.scroll.instance.scroll.y;
     }
-  }
+    window.addEventListener('wheel',      _blockScroll, { passive: false, capture: true });
+    window.addEventListener('touchmove',  _blockScroll, { passive: false, capture: true });
+  };
+  const hardUnlockScroll = () => {
+    window.removeEventListener('wheel',     _blockScroll, { capture: true });
+    window.removeEventListener('touchmove', _blockScroll, { capture: true });
+    locoScroll.start();
+  };
 
-  if (enterShellSection) {
-    console.log("Enter the Shell section found:", enterShellSection);
-    window.enterShellSection = enterShellSection;
-    
-    // Set initial state - hidden
-    gsap.set(enterShellSection, {
-      opacity: 0,
-      y: 50,
-      visibility: "visible"
-    });
-    
-    // Fade in when the section reaches the middle of the viewport
-    const enterShellFade = gsap.to(enterShellSection, {
+  let entryRevealDone = false;
+  playEntryReveal = () => {
+    if (entryRevealDone) return;
+    entryRevealDone = true;
+
+    // Confirm both containers are invisible before the sequence starts.
+    gsap.set([introEl, appsEl], { opacity: 0, overwrite: true });
+
+    // Hard-lock scroll for the entire reveal sequence.
+    hardLockScroll();
+    updateEntryDebugStatus("PHASE 1", "intro fading");
+
+    // Phase 1: intro fades in while scroll is fully locked.
+    gsap.to(introEl, {
       opacity: 1,
-      y: 0,
-      duration: 1,
+      duration: 2.5,
+      delay: 0.6,
       ease: "power2.out",
-      paused: true,
+      overwrite: true,
       onComplete: () => {
-        if (locoScroll) {
-          locoScroll.start();
-          locoScroll.update();
-        }
-      }
+        // Phase 2: apps fade in immediately — scroll still locked.
+        updateEntryDebugStatus("PHASE 2", "apps fading");
+        gsap.to(appsEl, {
+          opacity: 1,
+          duration: 0.9,
+          ease: "power2.out",
+          overwrite: true,
+          onComplete: () => {
+            // Everything visible — release the scroll lock.
+            hardUnlockScroll();
+            updateEntryDebugStatus("COMPLETE", "scroll enabled");
+          },
+        });
+      },
     });
 
-    const mainEl = document.querySelector("#main");
-    ScrollTrigger.create({
-      trigger: enterShellSection,
-      scroller: scroller,
-      start: "center center",
-      end: "center center",
-      once: true,
-      onEnter: () => {
-        if (locoScroll) {
-          locoScroll.stop();
-        }
-        enterShellFade.play();
-        console.log("Enter the Shell - fade animation started");
-      }
-    });
-  } else {
-    console.warn("Enter the Shell section not found");
-  }
-  
-  otherSections.forEach((section, index) => {
-    gsap.set(section, {
-      opacity: 0,
-      y: 50,
-      visibility: "hidden"
-    });
-    
-    gsap.to(section, {
-      opacity: 1,
-      y: 0,
-      visibility: "visible",
-      ease: "power2.out",
-      duration: 1,
-      scrollTrigger: {
-        trigger: section,
-        scroller: scroller,
-        start: "top 85%",
-        end: "top 40%",
-        toggleActions: "play none none reverse",
-        onEnter: () => {
-          console.log(`Entry section ${index + 2} entered viewport`);
-        }
-      }
-    });
-  });
-  
-  // Refresh ScrollTrigger after creating animations
-  ScrollTrigger.refresh();
+  };
 }
 
-// Start initialization after DOM is ready
+// Start initialization after DOM is ready (single bootstrap path).
 console.log("Setting up Blastoise hero initialization...");
+let didBootstrapInit = false;
+function bootstrapAppInit() {
+  if (didBootstrapInit) {
+    return;
+  }
+  didBootstrapInit = true;
+  console.log("Bootstrapping initialization");
+  setTimeout(initializeBlastoiseHeroWhenReady, 500);
+}
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    console.log("DOMContentLoaded fired, starting initialization");
-    setTimeout(initializeBlastoiseHeroWhenReady, 500);
-    setTimeout(initializeEntrySectionsWhenReady, 500);
-  });
+  document.addEventListener('DOMContentLoaded', bootstrapAppInit, { once: true });
 } else {
-  console.log("DOM already loaded, starting initialization");
-  setTimeout(initializeBlastoiseHeroWhenReady, 500);
-  setTimeout(initializeEntrySectionsWhenReady, 500);
+  bootstrapAppInit();
 }
-
-// Also try on window load as backup
-window.addEventListener('load', () => {
-  console.log("Window load fired, starting initialization");
-  setTimeout(initializeBlastoiseHeroWhenReady, 300);
-  setTimeout(initializeEntrySectionsWhenReady, 300);
-});
-
-var clutter= "";
-const page2Title = document.querySelector("#page2>h1");
-if (page2Title) {
-  page2Title.textContent.split(" ").forEach(function(dets){
-      clutter += `<span> ${dets} </span>`
-
-      page2Title.innerHTML = clutter;
-  })
-
-  gsap.to("#page2>h1>span",{
-      scrollTrigger:{
-          trigger:`#page2>h1>span`,
-          start:`top bottom`,
-          end:`bottom top`,
-          scroller:`#main`,
-          scrub:.5,
-      },
-      stagger:.2,
-      color:`#fff`
-  })
-} else {
-  console.warn("Skipping #page2>h1 animation: element not found");
-}
-
-
-function canvas(){
-  const canvas = document.querySelector("#page3>canvas");
-  if (!canvas) {
-    console.warn("Skipping #page3 canvas animation: canvas not found");
-    return;
-  }
-  const context = canvas.getContext("2d");
-
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-
-window.addEventListener("resize", function () {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  render();
-});
-
-function files(index) {
-  var data = `
-  assets/images/frames00007.png
-  assets/images/frames00013.png
-  assets/images/frames00010.png
-  assets/images/frames00016.png
-  assets/images/frames00019.png
-  assets/images/frames00022.png
-  assets/images/frames00025.png
-  assets/images/frames00028.png
-  assets/images/frames00031.png
-  assets/images/frames00034.png
-  assets/images/frames00037.png
-  assets/images/frames00040.png
-  assets/images/frames00043.png
-  assets/images/frames00046.png
-  assets/images/frames00049.png
-  assets/images/frames00052.png
-  assets/images/frames00055.png
-  assets/images/frames00058.png
-  assets/images/frames00061.png
-  assets/images/frames00064.png
-  assets/images/frames00067.png
-  assets/images/frames00070.png
-  assets/images/frames00073.png
-  assets/images/frames00076.png
-  assets/images/frames00079.png
-  assets/images/frames00082.png
-  assets/images/frames00085.png
-  assets/images/frames00088.png
-  assets/images/frames00091.png
-  assets/images/frames00094.png
-  assets/images/frames00097.png
-  assets/images/frames00100.png
-  assets/images/frames00103.png
-  assets/images/frames00106.png
-  assets/images/frames00109.png
-  assets/images/frames00112.png
-  assets/images/frames00115.png
-  assets/images/frames00118.png
-  assets/images/frames00121.png
-  assets/images/frames00124.png
-  assets/images/frames00127.png
-  assets/images/frames00130.png
-  assets/images/frames00133.png
-  assets/images/frames00136.png
-  assets/images/frames00139.png
-  assets/images/frames00142.png
-  assets/images/frames00145.png
-  assets/images/frames00148.png
-  assets/images/frames00151.png
-  assets/images/frames00154.png
-  assets/images/frames00157.png
-  assets/images/frames00160.png
-  assets/images/frames00163.png
-  assets/images/frames00166.png
-  assets/images/frames00169.png
-  assets/images/frames00172.png
-  assets/images/frames00175.png
-  assets/images/frames00178.png
-  assets/images/frames00181.png
-  assets/images/frames00184.png
-  assets/images/frames00187.png
-  assets/images/frames00190.png
-  assets/images/frames00193.png
-  assets/images/frames00196.png
-  assets/images/frames00199.png
-  assets/images/frames00202.png
- `;
-  return data.split("\n")[index];
-}
-
-const frameCount = 67;
-
-const images = [];
-const imageSeq = {
-  frame: 1,
-};
-
-for (let i = 0; i < frameCount; i++) {
-  const img = new Image();
-  img.src = files(i);
-  img.onerror = function() {
-    console.warn(`Failed to load image: ${files(i)}`);
-  };
-  images.push(img);
-}
-
-gsap.to(imageSeq, {
-  frame: frameCount - 1,
-  snap: "frame",
-  ease: `none`,
-  scrollTrigger: {
-    scrub: .5,
-    trigger: `#page3`,
-    start: `top top`,
-    end: `250% top`,
-    scroller: `#main`,
-  },
-  onUpdate: render,
-});
-
-images[1].onload = render;
-
-function render() {
-  scaleImage(images[imageSeq.frame], context);
-}
-
-function scaleImage(img, ctx) {
-  if (!img || !img.complete || img.naturalWidth === 0) {
-    return; // Skip if image is not loaded
-  }
-  var canvas = ctx.canvas;
-  var hRatio = canvas.width / img.width;
-  var vRatio = canvas.height / img.height;
-  var ratio = Math.max(hRatio, vRatio);
-  var centerShift_x = (canvas.width - img.width * ratio) / 2;
-  var centerShift_y = (canvas.height - img.height * ratio) / 2;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(
-    img,
-    0,
-    0,
-    img.width,
-    img.height,
-    centerShift_x,
-    centerShift_y,
-    img.width * ratio,
-    img.height * ratio
-  );
-}
-ScrollTrigger.create({
-
-  trigger: "#page3",
-  pin: true,
-  scroller: `#main`,
-  start: `top top`,
-  end: `250% top`,
-});
-}
-canvas()
-
-
-
-
-
-var clutter= "";
-const page4Title = document.querySelector("#page4>h1");
-if (page4Title) {
-  page4Title.textContent.split(" ").forEach(function(dets){
-      clutter += `<span> ${dets} </span>`
-
-      page4Title.innerHTML = clutter;
-  })
-
-  gsap.to("#page4>h1>span",{
-      scrollTrigger:{
-          trigger:`#page4>h1>span`,
-          start:`top bottom`,
-          end:`bottom top`,
-          scroller:`#main`,
-          scrub:.5,
-      },
-      stagger:.2,
-      color:`#fff`
-  })
-} else {
-  console.warn("Skipping #page4>h1 animation: element not found");
-}
-
-
-
-
-
-function canvas1(){
-  const canvas = document.querySelector("#page5>canvas");
-  if (!canvas) {
-    console.warn("Skipping #page5 canvas animation: canvas not found");
-    return;
-  }
-  const context = canvas.getContext("2d");
-
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-
-window.addEventListener("resize", function () {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  render();
-});
-
-function files(index) {
-  var data = `
-  assets/images/bridges00004.png
-  assets/images/bridges00007.png
-  assets/images/bridges00007.png
-  assets/images/bridges00010.png
-  assets/images/bridges00013.png
-  assets/images/bridges00016.png
-  assets/images/bridges00019.png
-  assets/images/bridges00022.png
-  assets/images/bridges00025.png
-  assets/images/bridges00028.png
-  assets/images/bridges00031.png
-  assets/images/bridges00034.png
-  assets/images/bridges00037.png
-  assets/images/bridges00040.png
-  assets/images/bridges00043.png
-  assets/images/bridges00046.png
-  assets/images/bridges00049.png
-  assets/images/bridges00052.png
-  assets/images/bridges00055.png
-  assets/images/bridges00058.png
-  assets/images/bridges00061.png
-  assets/images/bridges00064.png
-  assets/images/bridges00067.png
-  assets/images/bridges00070.png
-  assets/images/bridges00073.png
-  assets/images/bridges00076.png
-  assets/images/bridges00079.png
-  assets/images/bridges00082.png
-  assets/images/bridges00085.png
-  assets/images/bridges00088.png
-  assets/images/bridges00091.png
-  assets/images/bridges00094.png
-  assets/images/bridges00097.png
-  assets/images/bridges00100.png
-  assets/images/bridges00103.png
-  assets/images/bridges00106.png
-  assets/images/bridges00109.png
-  assets/images/bridges00112.png
-  assets/images/bridges00115.png
-  assets/images/bridges00118.png
-  assets/images/bridges00121.png
-  assets/images/bridges00124.png
-  assets/images/bridges00127.png
-  assets/images/bridges00130.png
-  assets/images/bridges00133.png
-  assets/images/bridges00136.png
-  assets/images/bridges00139.png
-  assets/images/bridges00142.png
-  assets/images/bridges00145.png
-  assets/images/bridges00148.png
-  assets/images/bridges00151.png
-  assets/images/bridges00154.png
-  assets/images/bridges00157.png
-  assets/images/bridges00160.png
-  assets/images/bridges00163.png
-  assets/images/bridges00166.png
-  assets/images/bridges00169.png
-  assets/images/bridges00172.png
-  assets/images/bridges00175.png
-  assets/images/bridges00178.png
-  assets/images/bridges00181.png
-  assets/images/bridges00184.png
-  assets/images/bridges00187.png
-  assets/images/bridges00190.png
-  assets/images/bridges00193.png
-  assets/images/bridges00196.png
-  assets/images/bridges00199.png
-  assets/images/bridges00202.png
- `;
-  return data.split("\n")[index];
-}
-
-const frameCount = 67;
-
-const images = [];
-const imageSeq = {
-  frame: 1,
-};
-
-for (let i = 0; i < frameCount; i++) {
-  const img = new Image();
-  img.src = files(i);
-  img.onerror = function() {
-    console.warn(`Failed to load image: ${files(i)}`);
-  };
-  images.push(img);
-}
-
-gsap.to(imageSeq, {
-    frame: frameCount - 1,
-    snap: "frame",
-    ease: `none`,
-    scrollTrigger: {
-    scrub: .5,
-    trigger: `#page5`,
-    start: `top top`,
-    end: `250% top`,
-    scroller: `#main`,
-  },
-  onUpdate: render,
-});
-
-images[1].onload = render;
-
-function render() {
-  scaleImage(images[imageSeq.frame], context);
-}
-
-function scaleImage(img, ctx) {
-  if (!img || !img.complete || img.naturalWidth === 0) {
-    return; // Skip if image is not loaded
-  }
-  var canvas = ctx.canvas;
-  var hRatio = canvas.width / img.width;
-  var vRatio = canvas.height / img.height;
-  var ratio = Math.max(hRatio, vRatio);
-  var centerShift_x = (canvas.width - img.width * ratio) / 2;
-  var centerShift_y = (canvas.height - img.height * ratio) / 2;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(
-    img,
-    0,
-    0,
-    img.width,
-    img.height,
-    centerShift_x,
-    centerShift_y,
-    img.width * ratio,
-    img.height * ratio
-  );
-}
-ScrollTrigger.create({
-
-  trigger: "#page5",
-  pin: true,
-  scroller: `#main`,
-  start: `top top`,
-  end: `250% top`,
-});
-}
-canvas1()
-
-
-
-var clutter= "";
-const page6Title = document.querySelector("#page6>h1");
-if (page6Title) {
-  page6Title.textContent.split(" ").forEach(function(dets){
-      clutter += `<span> ${dets} </span>`
-
-      page6Title.innerHTML = clutter;
-  })
-
-  gsap.to("#page6>h1>span",{
-      scrollTrigger:{
-          trigger:`#page6>h1>span`,
-          start:`top bottom`,
-          end:`bottom top`,
-          scroller:`#main`,
-          scrub:.5,
-      },
-      stagger:.2,
-      color:`#fff`
-  })
-} else {
-  console.warn("Skipping #page6>h1 animation: element not found");
-}
-
-
-
-
-function canvas2(){
-  const canvas = document.querySelector("#page7>canvas");
-  if (!canvas) {
-    console.warn("Skipping #page7 canvas animation: canvas not found");
-    return;
-  }
-  const context = canvas.getContext("2d");
-  
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  
-  
-  window.addEventListener("resize", function () {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  render();
-  });
-  
-  function files(index) {
-  var data = `
-  
-  https://thisismagma.com/assets/home/lore/seq/1.webp?2
-  https://thisismagma.com/assets/home/lore/seq/2.webp?2
-  https://thisismagma.com/assets/home/lore/seq/3.webp?2
-  https://thisismagma.com/assets/home/lore/seq/4.webp?2
-  https://thisismagma.com/assets/home/lore/seq/5.webp?2
-  https://thisismagma.com/assets/home/lore/seq/6.webp?2
-  https://thisismagma.com/assets/home/lore/seq/7.webp?2
-  https://thisismagma.com/assets/home/lore/seq/8.webp?2
-  https://thisismagma.com/assets/home/lore/seq/9.webp?2
-  https://thisismagma.com/assets/home/lore/seq/10.webp?2
-  https://thisismagma.com/assets/home/lore/seq/11.webp?2
-  https://thisismagma.com/assets/home/lore/seq/12.webp?2
-  https://thisismagma.com/assets/home/lore/seq/13.webp?2
-  https://thisismagma.com/assets/home/lore/seq/14.webp?2
-  https://thisismagma.com/assets/home/lore/seq/15.webp?2
-  https://thisismagma.com/assets/home/lore/seq/16.webp?2
-  https://thisismagma.com/assets/home/lore/seq/17.webp?2
-  https://thisismagma.com/assets/home/lore/seq/18.webp?2
-  https://thisismagma.com/assets/home/lore/seq/19.webp?2
-  https://thisismagma.com/assets/home/lore/seq/20.webp?2
-  https://thisismagma.com/assets/home/lore/seq/21.webp?2
-  https://thisismagma.com/assets/home/lore/seq/22.webp?2
-  https://thisismagma.com/assets/home/lore/seq/23.webp?2
-  https://thisismagma.com/assets/home/lore/seq/24.webp?2
-  https://thisismagma.com/assets/home/lore/seq/25.webp?2
-  https://thisismagma.com/assets/home/lore/seq/26.webp?2
-  https://thisismagma.com/assets/home/lore/seq/27.webp?2
-  https://thisismagma.com/assets/home/lore/seq/28.webp?2
-  https://thisismagma.com/assets/home/lore/seq/29.webp?2
-  https://thisismagma.com/assets/home/lore/seq/30.webp?2
-  https://thisismagma.com/assets/home/lore/seq/31.webp?2
-  https://thisismagma.com/assets/home/lore/seq/32.webp?2
-  https://thisismagma.com/assets/home/lore/seq/33.webp?2
-  https://thisismagma.com/assets/home/lore/seq/34.webp?2
-  https://thisismagma.com/assets/home/lore/seq/35.webp?2
-  https://thisismagma.com/assets/home/lore/seq/36.webp?2
-  https://thisismagma.com/assets/home/lore/seq/37.webp?2
-  https://thisismagma.com/assets/home/lore/seq/38.webp?2
-  https://thisismagma.com/assets/home/lore/seq/39.webp?2
-  https://thisismagma.com/assets/home/lore/seq/40.webp?2
-  https://thisismagma.com/assets/home/lore/seq/41.webp?2
-  https://thisismagma.com/assets/home/lore/seq/42.webp?2
-  https://thisismagma.com/assets/home/lore/seq/43.webp?2
-  https://thisismagma.com/assets/home/lore/seq/44.webp?2
-  https://thisismagma.com/assets/home/lore/seq/45.webp?2
-  https://thisismagma.com/assets/home/lore/seq/46.webp?2
-  https://thisismagma.com/assets/home/lore/seq/47.webp?2
-  https://thisismagma.com/assets/home/lore/seq/48.webp?2
-  https://thisismagma.com/assets/home/lore/seq/49.webp?2
-  https://thisismagma.com/assets/home/lore/seq/50.webp?2
-  https://thisismagma.com/assets/home/lore/seq/51.webp?2
-  https://thisismagma.com/assets/home/lore/seq/52.webp?2
-  https://thisismagma.com/assets/home/lore/seq/53.webp?2
-  https://thisismagma.com/assets/home/lore/seq/54.webp?2
-  https://thisismagma.com/assets/home/lore/seq/55.webp?2
-  https://thisismagma.com/assets/home/lore/seq/56.webp?2
-  https://thisismagma.com/assets/home/lore/seq/57.webp?2
-  https://thisismagma.com/assets/home/lore/seq/58.webp?2
-  https://thisismagma.com/assets/home/lore/seq/59.webp?2
-  https://thisismagma.com/assets/home/lore/seq/60.webp?2
-  https://thisismagma.com/assets/home/lore/seq/61.webp?2
-  https://thisismagma.com/assets/home/lore/seq/62.webp?2
-  https://thisismagma.com/assets/home/lore/seq/63.webp?2
-  https://thisismagma.com/assets/home/lore/seq/64.webp?2
-  https://thisismagma.com/assets/home/lore/seq/65.webp?2
-  https://thisismagma.com/assets/home/lore/seq/66.webp?2
-  https://thisismagma.com/assets/home/lore/seq/67.webp?2
-  https://thisismagma.com/assets/home/lore/seq/68.webp?2
-  https://thisismagma.com/assets/home/lore/seq/69.webp?2
-  https://thisismagma.com/assets/home/lore/seq/70.webp?2
-  https://thisismagma.com/assets/home/lore/seq/71.webp?2
-  https://thisismagma.com/assets/home/lore/seq/72.webp?2
-  https://thisismagma.com/assets/home/lore/seq/73.webp?2
-  https://thisismagma.com/assets/home/lore/seq/74.webp?2
-  https://thisismagma.com/assets/home/lore/seq/75.webp?2
-  https://thisismagma.com/assets/home/lore/seq/76.webp?2
-  https://thisismagma.com/assets/home/lore/seq/77.webp?2
-  https://thisismagma.com/assets/home/lore/seq/78.webp?2
-  https://thisismagma.com/assets/home/lore/seq/79.webp?2
-  https://thisismagma.com/assets/home/lore/seq/80.webp?2
-  https://thisismagma.com/assets/home/lore/seq/81.webp?2
-  https://thisismagma.com/assets/home/lore/seq/82.webp?2
-  https://thisismagma.com/assets/home/lore/seq/83.webp?2
-  https://thisismagma.com/assets/home/lore/seq/84.webp?2
-  https://thisismagma.com/assets/home/lore/seq/85.webp?2
-  https://thisismagma.com/assets/home/lore/seq/86.webp?2
-  https://thisismagma.com/assets/home/lore/seq/87.webp?2
-  https://thisismagma.com/assets/home/lore/seq/88.webp?2
-  https://thisismagma.com/assets/home/lore/seq/89.webp?2
-  https://thisismagma.com/assets/home/lore/seq/90.webp?2
-  https://thisismagma.com/assets/home/lore/seq/91.webp?2
-  https://thisismagma.com/assets/home/lore/seq/92.webp?2
-  https://thisismagma.com/assets/home/lore/seq/93.webp?2
-  https://thisismagma.com/assets/home/lore/seq/94.webp?2
-  https://thisismagma.com/assets/home/lore/seq/95.webp?2
-  https://thisismagma.com/assets/home/lore/seq/96.webp?2
-  https://thisismagma.com/assets/home/lore/seq/97.webp?2
-  https://thisismagma.com/assets/home/lore/seq/98.webp?2
-  https://thisismagma.com/assets/home/lore/seq/99.webp?2
-  https://thisismagma.com/assets/home/lore/seq/100.webp?2
-  https://thisismagma.com/assets/home/lore/seq/101.webp?2
-  https://thisismagma.com/assets/home/lore/seq/102.webp?2
-  https://thisismagma.com/assets/home/lore/seq/103.webp?2
-  https://thisismagma.com/assets/home/lore/seq/104.webp?2
-  https://thisismagma.com/assets/home/lore/seq/105.webp?2
-  https://thisismagma.com/assets/home/lore/seq/106.webp?2
-  https://thisismagma.com/assets/home/lore/seq/107.webp?2
-  https://thisismagma.com/assets/home/lore/seq/108.webp?2
-  https://thisismagma.com/assets/home/lore/seq/109.webp?2
-  https://thisismagma.com/assets/home/lore/seq/110.webp?2
-  https://thisismagma.com/assets/home/lore/seq/111.webp?2
-  https://thisismagma.com/assets/home/lore/seq/112.webp?2
-  https://thisismagma.com/assets/home/lore/seq/113.webp?2
-  https://thisismagma.com/assets/home/lore/seq/114.webp?2
-  https://thisismagma.com/assets/home/lore/seq/115.webp?2
-  https://thisismagma.com/assets/home/lore/seq/116.webp?2
-  https://thisismagma.com/assets/home/lore/seq/117.webp?2
-  https://thisismagma.com/assets/home/lore/seq/118.webp?2
-  https://thisismagma.com/assets/home/lore/seq/119.webp?2
-  https://thisismagma.com/assets/home/lore/seq/120.webp?2
-  https://thisismagma.com/assets/home/lore/seq/121.webp?2
-  https://thisismagma.com/assets/home/lore/seq/122.webp?2
-  https://thisismagma.com/assets/home/lore/seq/123.webp?2
-  https://thisismagma.com/assets/home/lore/seq/124.webp?2
-  https://thisismagma.com/assets/home/lore/seq/125.webp?2
-  https://thisismagma.com/assets/home/lore/seq/126.webp?2
-  https://thisismagma.com/assets/home/lore/seq/127.webp?2
-  https://thisismagma.com/assets/home/lore/seq/128.webp?2
-  https://thisismagma.com/assets/home/lore/seq/129.webp?2
-  https://thisismagma.com/assets/home/lore/seq/130.webp?2
-  https://thisismagma.com/assets/home/lore/seq/131.webp?2
-  https://thisismagma.com/assets/home/lore/seq/132.webp?2
-  https://thisismagma.com/assets/home/lore/seq/133.webp?2
-  https://thisismagma.com/assets/home/lore/seq/134.webp?2
-  https://thisismagma.com/assets/home/lore/seq/135.webp?2
-  https://thisismagma.com/assets/home/lore/seq/136.webp?2
-  
-  `;
-  return data.split("\n")[index];
-  }
-  
-  const frameCount = 136;
-  
-  const images = [];
-  const imageSeq = {
-  frame: 1,
-  };
-  
-  for (let i = 0; i < frameCount; i++) {
-  const img = new Image();
-  img.src = files(i);
-  img.onerror = function() {
-    console.warn(`Failed to load image: ${files(i)}`);
-  };
-  images.push(img);
-  }
-
-  gsap.to(imageSeq, {
-  frame: frameCount - 1,
-  snap: "frame",
-  ease: `none`,
-  scrollTrigger: {
-    scrub: .5,
-    trigger: `#page7`,
-    start: `top top`,
-    end: `250% top`,
-    scroller: `#main`,
-  },
-  onUpdate: render,
-  });
-
-  images[1].onload = render;
-  
-  function render() {
-  scaleImage(images[imageSeq.frame], context);
-  }
-  
-  function scaleImage(img, ctx) {
-  var canvas = ctx.canvas;
-  var hRatio = canvas.width / img.width;
-  var vRatio = canvas.height / img.height;
-  var ratio = Math.max(hRatio, vRatio);
-  var centerShift_x = (canvas.width - img.width * ratio) / 2;
-  var centerShift_y = (canvas.height - img.height * ratio) / 2;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(
-    img,
-    0,
-    0,
-    img.width,
-    img.height,
-    centerShift_x,
-    centerShift_y,
-    img.width * ratio,
-    img.height * ratio
-  );
-  }
-  ScrollTrigger.create({
-  
-  trigger: "#page7",
-  pin: true,
-  scroller: `#main`,
-  start: `top top`,
-  end: `250% top`,
-  });
-  }
-  canvas2()
-  
-  
-  
-  if (document.querySelector(".page7-cir")) {
-  gsap.to(".page7-cir",{
-    scrollTrigger:{
-      trigger:`.page7-cir`,
-      start:`top center`,
-      end:`bottom top`,
-      scroller:`#main`,
-      scrub:.5
-    },
-    scale:1.5
-    });
-  }
-  
-  
-  
-  if (document.querySelector(".page7-cir-inner")) {
-  gsap.to(".page7-cir-inner",{
-    scrollTrigger:{
-      trigger:`.page7-cir-inner`,
-      start:`top center`,
-      end:`bottom top`,
-      scroller:`#main`,
-      scrub:.5
-    },
-    backgroundColor : `#0a3bce91`,
-    });
-  }
-
-
-// Button functionality - Initialize after page loads
-setTimeout(function() {
-  // Book a Demo buttons
-  const allButtons = document.querySelectorAll('button');
-  allButtons.forEach(button => {
-    const buttonText = button.textContent.trim();
-    if (buttonText.includes('Book a Demo') || buttonText.includes('BOOK A DEMO')) {
-      button.addEventListener('click', function(e) {
-        e.preventDefault();
-        // Scroll to page13 (Become an early adopter section)
-        const page13 = document.querySelector('#page13');
-        if (page13 && locoScroll) {
-          locoScroll.scrollTo(page13);
-        }
-      });
-    }
-    // Learn More buttons
-    else if (buttonText.includes('LEARN MORE') || buttonText.includes('Learn More')) {
-      button.addEventListener('click', function(e) {
-        e.preventDefault();
-        // Scroll to page10 (What is Magma section)
-        const page10 = document.querySelector('#page10');
-        if (page10 && locoScroll) {
-          locoScroll.scrollTo(page10);
-        }
-      });
-    }
-  });
-
-  // Menu button functionality
-  const menuButton = document.querySelector('#right-nav button:last-child');
-  if (menuButton) {
-    menuButton.addEventListener('click', function() {
-      // Toggle menu functionality can be added here
-      alert('Menu functionality coming soon!');
-    });
-  }
-
-  // Social media links
-  const socialLinks = document.querySelectorAll('.page14-inner');
-  socialLinks.forEach(link => {
-    link.style.cursor = 'pointer';
-    link.addEventListener('click', function() {
-      const h1Element = link.querySelector('h1');
-      if (h1Element) {
-        const platform = h1Element.textContent.trim();
-        const urls = {
-          'Twitter': 'https://twitter.com',
-          'LinkedIn': 'https://linkedin.com',
-          'Instagram': 'https://instagram.com',
-          'Telegram': 'https://telegram.org',
-          'Youtube': 'https://youtube.com'
-        };
-        // Handle Twitter/X icon
-        if (link.querySelector('.ri-twitter-x-line')) {
-          window.open('https://twitter.com', '_blank');
-        } else if (urls[platform]) {
-          window.open(urls[platform], '_blank');
-        }
-      }
-    });
-  });
-}, 100);
