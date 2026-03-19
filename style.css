@@ -153,8 +153,7 @@ html,body{
     opacity: 1 !important;
     position: relative !important; /* Make image a positioning context for zoom-target */
     z-index: 15; /* Very high to ensure it's on top */
-    /* Force visibility */
-    pointer-events: auto;
+    pointer-events: none;
     /* Don't force transform - let GSAP control it */
     margin: 0 !important;
     padding: 0 !important;
