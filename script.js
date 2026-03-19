@@ -1,221 +1,3 @@
-// Global locomotive scroll instance
-let locoScroll;
-if ("scrollRestoration" in history) {
-  history.scrollRestoration = "manual";
-}
-
-function loco(){
-    gsap.registerPlugin(ScrollTrigger);
-
-// Using Locomotive Scroll from Locomotive https://github.com/locomotivemtl/locomotive-scroll
-
-// Wait for DOM to be fully loaded and content to be measured
-setTimeout(() => {
-  const mainEl = document.querySelector("#main");
-  if (mainEl) {
-    // CRITICAL: Ensure we start at the top before initializing Locomotive Scroll
-    mainEl.scrollTop = 0;
-    window.scrollTo(0, 0);
-    
-    // CRITICAL: Force #main to be visible BEFORE initializing Locomotive Scroll
-    // Locomotive Scroll sets opacity: 0 during initialization, which hides everything
-    mainEl.style.setProperty("opacity", "1", "important");
-    mainEl.style.setProperty("pointer-events", "auto", "important");
-    
-    // CRITICAL: Ensure main element can scroll BEFORE initializing Locomotive Scroll
-    // Remove any transforms or styles that might prevent scrolling
-    mainEl.style.height = "";
-    mainEl.style.minHeight = "";
-    
-    console.log("Before Locomotive Scroll - scrollHeight:", mainEl.scrollHeight, "clientHeight:", mainEl.clientHeight);
-    
-    locoScroll = new LocomotiveScroll({
-      el: mainEl,
-      smooth: true,
-      multiplier: 1,
-      class: "is-revealed",
-      smoothMobile: true,
-      // Always boot from top so ScrollTrigger progress starts at 0.
-      resetNativeScroll: true,
-      inertia: 0.5 // Add some inertia for smoother feel
-    });
-    
-    // Keep scrolling enabled; animation setup handles image readiness independently.
-      mainEl.classList.add("scroll-enabled");
-      mainEl.style.overflowY = "scroll";
-    
-    console.log("Locomotive Scroll initialized:", locoScroll);
-    
-    // CRITICAL: Force Locomotive Scroll to update multiple times to ensure scrolling works
-    setTimeout(() => {
-      if (locoScroll) {
-        locoScroll.update();
-        console.log("After first update - scrollHeight:", mainEl.scrollHeight, "clientHeight:", mainEl.clientHeight);
-      }
-    }, 100);
-    
-    setTimeout(() => {
-      if (locoScroll) {
-        locoScroll.update();
-        console.log("After second update - scrollHeight:", mainEl.scrollHeight, "clientHeight:", mainEl.clientHeight);
-        console.log("Locomotive Scroll scroll instance:", locoScroll.scroll?.instance);
-      }
-    }, 500);
-    
-    // CRITICAL: Immediately force #main to be visible after Locomotive Scroll initialization
-    // Locomotive Scroll may set opacity: 0 during initialization
-    mainEl.style.setProperty("opacity", "1", "important");
-    mainEl.style.setProperty("pointer-events", "auto", "important");
-    
-    // CRITICAL: Exclude hero image from Locomotive Scroll transforms
-    // This prevents Locomotive Scroll from moving/hiding it
-    setTimeout(() => {
-      const heroBlastoise = document.querySelector("#hero-blastoise");
-      const heroContainer = document.querySelector(".hero-blastoise-container");
-      const heroSection = document.querySelector("#section-hero");
-      
-      // Ensure hero section is marked as a scroll section
-      // Remove data-scroll attributes that interfere with ScrollTrigger
-      if (heroSection) {
-        heroSection.removeAttribute("data-scroll-section");
-      }
-      if (heroBlastoise) {
-        heroBlastoise.removeAttribute("data-scroll");
-        heroBlastoise.removeAttribute("data-scroll-speed");
-      }
-      if (heroContainer) {
-        heroContainer.removeAttribute("data-scroll");
-        heroContainer.removeAttribute("data-scroll-speed");
-      }
-      
-      // Force Locomotive Scroll to update and respect our settings
-      if (locoScroll) {
-        locoScroll.update();
-      }
-    }, 100);
-    
-    // Aggressively pin startup scroll position to 0 to avoid restored-progress fade.
-    const forceTop = () => {
-      mainEl.scrollTop = 0;
-      window.scrollTo(0, 0);
-      locoScroll.scrollTo(0, { duration: 0, disableLerp: true });
-      if (locoScroll.scroll && locoScroll.scroll.instance) {
-        locoScroll.scroll.instance.scroll.y = 0;
-        locoScroll.scroll.instance.scroll.x = 0;
-      }
-      ScrollTrigger.update();
-    };
-    forceTop();
-    setTimeout(forceTop, 80);
-    setTimeout(forceTop, 220);
-    setTimeout(forceTop, 500);
-    
-    // CRITICAL: Watch for Locomotive Scroll ready event and ensure #main is visible
-    locoScroll.on("ready", () => {
-      mainEl.style.setProperty("opacity", "1", "important");
-      mainEl.style.setProperty("pointer-events", "auto", "important");
-      console.log("Locomotive Scroll ready - forced #main to be visible");
-    });
-
-    // Select pin behavior from the active runtime mode.
-    // Locomotive smooth mode uses transforms; native mode needs fixed pinning.
-    const proxyPinType = (
-      (getComputedStyle(mainEl).transform && getComputedStyle(mainEl).transform !== "none") ||
-      !!locoScroll?.options?.smooth ||
-      !!locoScroll?.options?.smoothMobile
-    ) ? "transform" : "fixed";
-
-    // tell ScrollTrigger to use these proxy methods for the "#main" element since Locomotive Scroll is hijacking things
-    ScrollTrigger.scrollerProxy("#main", {
-      scrollTop(value) {
-        if (arguments.length) {
-          // Setting scroll position
-          locoScroll.scrollTo(value, { duration: 0, disableLerp: true });
-          return;
-        }
-        // Read scroll position from Locomotive Scroll
-        // Locomotive Scroll v3.5.4 stores scroll position in scroll.instance.scroll.y
-        const locoY = locoScroll?.scroll?.instance?.scroll?.y;
-        if (typeof locoY === "number" && !isNaN(locoY)) {
-          return Math.max(0, locoY); // Ensure non-negative
-        }
-        // Fallback to DOM scrollTop
-        const domY = mainEl ? mainEl.scrollTop : 0;
-        return Math.max(0, domY); // Ensure non-negative
-      },
-      scrollLeft(value) {
-        return 0;
-      },
-      getBoundingClientRect() {
-        // Return viewport dimensions - #main is the viewport container
-        // For custom scrollers, this should represent the viewport
-        // Use actual viewport dimensions for proper mobile support
-        const vh = window.innerHeight || document.documentElement.clientHeight;
-        const vw = window.innerWidth || document.documentElement.clientWidth;
-        return {
-          top: 0,
-          left: 0,
-          width: vw,
-          height: vh
-        };
-      },
-      pinType: proxyPinType
-    });
-    let didInitialProxyRefresh = false;
-    const runInitialProxyRefresh = () => {
-      if (didInitialProxyRefresh) {
-        return;
-      }
-      didInitialProxyRefresh = true;
-      ScrollTrigger.refresh();
-    };
-
-    // each time the window updates, we should refresh ScrollTrigger and then update LocomotiveScroll. 
-    ScrollTrigger.addEventListener("refresh", () => {
-      if (locoScroll) {
-        locoScroll.update();
-      }
-    });
-    
-    // CRITICAL: Handle window resize to update Locomotive Scroll and ScrollTrigger
-    let resizeTimeout;
-    window.addEventListener("resize", () => {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        if (locoScroll) {
-          locoScroll.update();
-          console.log("Window resized - Locomotive Scroll updated");
-        }
-        ScrollTrigger.refresh();
-        console.log("Window resized - ScrollTrigger refreshed");
-      }, 150); // Debounce resize events
-    });
-
-    // Single scroll update path: Locomotive drives ScrollTrigger.
-    locoScroll.on("scroll", (e) => {
-      // Always update ScrollTrigger when Locomotive Scroll fires scroll event
-      ScrollTrigger.update();
-    });
-    
-    // Force updates to ensure scroll is enabled
-    setTimeout(() => {
-      if (locoScroll) {
-        locoScroll.update();
-      }
-    }, 200);
-    
-    setTimeout(() => {
-      if (locoScroll) {
-        locoScroll.update();
-        runInitialProxyRefresh();
-      }
-    }, 500);
-  }
-}, 100);
-
-}
-loco()
-
 // Blastoise hero - STEP 1: Just make it visible and keep it visible
 function initBlastoiseHero() {
   const heroBlastoise = document.querySelector("#hero-blastoise");
@@ -277,16 +59,6 @@ function initBlastoiseHero() {
   renderHeroRuler();
   updateHeroDebugStatus(0, false);
 
-  // Verify Locomotive Scroll is ready - wait a bit if not ready
-  if (!locoScroll) {
-    console.warn("Locomotive Scroll not initialized yet, retrying...");
-    setTimeout(() => initBlastoiseHero(), 200);
-    return;
-  }
-
-  // MUST use "#main" as scroller to match Locomotive Scroll setup
-  const scroller = "#main";
-  
   // Kill any existing animations
   gsap.killTweensOf(heroBlastoise);
   
@@ -576,11 +348,10 @@ function initBlastoiseHero() {
           console.log("Calculating end - heroSectionHeight:", heroSectionHeight, "scrollDistance:", heroSectionHeight);
           return `+=${heroSectionHeight}`;
         },
-        scrub: true, // Use direct scroll binding; Locomotive remains the only smoother.
+        scrub: 0.5,
         pin: true,
         pinSpacing: false,
         anticipatePin: 1,
-        scroller: scroller,
         invalidateOnRefresh: true,
         markers: false, // Set to true for debugging
         onUpdate: function(self) {
@@ -631,10 +402,13 @@ function initBlastoiseHero() {
           }
         },
         onEnterBack: function() {
-          // Returning from entry: show hero and reset entry handoff state.
+          // Returning from entry: show hero and reset entry reveal so it replays on next forward scroll.
           setHeroVisibilityAtMaxZoom(false);
           setHeroBackgroundByProgress(0.98);
           updateHeroDebugStatus(hideThreshold, false);
+          if (resetEntryReveal) {
+            resetEntryReveal();
+          }
         },
         // Recalculate everything on resize for full responsiveness
         onRefresh: function(self) {
@@ -703,81 +477,14 @@ function initBlastoiseHero() {
   }, 100);
 }
 
-// Flags to prevent multiple initializations
-let blastoiseHeroInitialized = false;
-
-// Initialize Blastoise hero AFTER Locomotive Scroll is fully set up
-// Use a more reliable initialization approach
-function initializeBlastoiseHeroWhenReady() {
-  // Prevent multiple initializations
-  if (blastoiseHeroInitialized) {
-    return;
-  }
-  
-  // Check if Locomotive Scroll is ready
-  if (!locoScroll) {
-    console.log("Waiting for Locomotive Scroll...");
-    setTimeout(initializeBlastoiseHeroWhenReady, 100);
-    return;
-  }
-  
-  // Verify elements exist
-  const heroBlastoise = document.querySelector("#hero-blastoise");
-  if (!heroBlastoise) {
-    console.log("Waiting for hero image...");
-    setTimeout(initializeBlastoiseHeroWhenReady, 100);
-    return;
-  }
-  
-  // Verify image is loaded
-  if (!heroBlastoise.complete || heroBlastoise.naturalWidth === 0) {
-    console.log("Waiting for image to load...");
-    heroBlastoise.onload = initializeBlastoiseHeroWhenReady;
-    return;
-  }
-  
-  console.log("All ready, initializing Blastoise hero");
-  blastoiseHeroInitialized = true; // Mark as initialized
-  
-  // Enable scrolling now that image is loaded
-  const mainEl = document.querySelector("#main");
-  if (mainEl) {
-    mainEl.classList.add("scroll-enabled");
-    // Also enable via style to ensure it works
-    mainEl.style.overflowY = "scroll";
-  }
-  
-  // Enable Locomotive Scroll now that image is loaded
-  if (locoScroll) {
-    // Ensure we're at scroll position 0 before initializing animations
-    locoScroll.scrollTo(0, { duration: 0, disableLerp: true });
-    if (locoScroll.scroll && locoScroll.scroll.instance) {
-      locoScroll.scroll.instance.scroll.y = 0;
-      locoScroll.scroll.instance.scroll.x = 0;
-    }
-    locoScroll.start();
-    locoScroll.update();
-  }
-  const heroTitleOverlay = document.querySelector("#hero-title-overlay");
-  if (heroTitleOverlay) {
-    gsap.set(heroTitleOverlay, { opacity: 1, x: 0, y: 0 });
-  }
-  
-  // Initialize hero animations immediately - ScrollTrigger will handle timing
-  console.log("Calling initBlastoiseHero...");
-  initBlastoiseHero();
-
-  // Entry section: fade in from center with scroll frozen
-  initEntryReveal();
-}
-
-// Entry section: Phase 1 scroll-driven (intro), Phase 2 time-based (apps)
+// Entry section: fade in on hero onLeave, no scroll locking.
 let playEntryReveal = null;
+let entryRevealDone = false;
+let resetEntryReveal = null;
 function initEntryReveal() {
   const introEl = document.querySelector("#entry-intro");
   const appsByBlastoiseEl = document.querySelector("#entry-apps-by-blastoise");
   const introDividerEl = document.querySelector("#entry-intro-divider");
-  const introH2El = introEl ? introEl.querySelector("h2") : null;
   const appsEl = document.querySelector("#entry-apps");
   const entrySection = document.querySelector("#section-entry");
   const entryDebugStatus = document.querySelector("#entry-debug-status");
@@ -791,56 +498,35 @@ function initEntryReveal() {
     entryDebugStatus.style.color = isComplete ? "#39ff14" : "#00aeff";
   };
 
-  if (!introEl || !appsByBlastoiseEl || !introDividerEl || !appsEl || !locoScroll || !entrySection) {
+  if (!introEl || !appsByBlastoiseEl || !introDividerEl || !appsEl || !entrySection) {
     updateEntryDebugStatus("ERROR", "elements missing");
     return;
   }
 
-  updateEntryDebugStatus("WAITING", "scroll frozen until hero onLeave");
-  // Hide parent containers so individual children cannot flash visible.
-  // CSS also sets .entry-section--intro { opacity: 0 } as a pre-JS safety net.
+  updateEntryDebugStatus("WAITING", "hero onLeave pending");
   gsap.set([introEl, appsEl], { opacity: 0, overwrite: true });
 
-  // Capturing scroll blocker — fires before Locomotive sees any wheel/touch input.
-  const _blockScroll = (e) => {
-    e.preventDefault();
-    e.stopImmediatePropagation();
-  };
-  const hardLockScroll = () => {
-    locoScroll.stop();
-    if (locoScroll.scroll && locoScroll.scroll.instance) {
-      locoScroll.scroll.instance.delta.y = locoScroll.scroll.instance.scroll.y;
-    }
-    window.addEventListener('wheel',      _blockScroll, { passive: false, capture: true });
-    window.addEventListener('touchmove',  _blockScroll, { passive: false, capture: true });
-  };
-  const hardUnlockScroll = () => {
-    window.removeEventListener('wheel',     _blockScroll, { capture: true });
-    window.removeEventListener('touchmove', _blockScroll, { capture: true });
-    locoScroll.start();
+  resetEntryReveal = () => {
+    entryRevealDone = false;
+    gsap.killTweensOf([introEl, appsEl]);
+    gsap.set([introEl, appsEl], { opacity: 0, overwrite: true });
+    updateEntryDebugStatus("WAITING", "hero onLeave pending");
   };
 
-  let entryRevealDone = false;
   playEntryReveal = () => {
     if (entryRevealDone) return;
     entryRevealDone = true;
 
-    // Confirm both containers are invisible before the sequence starts.
     gsap.set([introEl, appsEl], { opacity: 0, overwrite: true });
-
-    // Hard-lock scroll for the entire reveal sequence.
-    hardLockScroll();
     updateEntryDebugStatus("PHASE 1", "intro fading");
 
-    // Phase 1: intro fades in while scroll is fully locked.
     gsap.to(introEl, {
       opacity: 1,
-      duration: 2.5,
-      delay: 0.6,
+      duration: 1.2,
+      delay: 0.3,
       ease: "power2.out",
       overwrite: true,
       onComplete: () => {
-        // Phase 2: apps fade in immediately — scroll still locked.
         updateEntryDebugStatus("PHASE 2", "apps fading");
         gsap.to(appsEl, {
           opacity: 1,
@@ -848,31 +534,40 @@ function initEntryReveal() {
           ease: "power2.out",
           overwrite: true,
           onComplete: () => {
-            // Everything visible — release the scroll lock.
-            hardUnlockScroll();
-            updateEntryDebugStatus("COMPLETE", "scroll enabled");
+            updateEntryDebugStatus("COMPLETE");
           },
         });
       },
     });
-
   };
 }
 
-// Start initialization after DOM is ready (single bootstrap path).
-console.log("Setting up Blastoise hero initialization...");
-let didBootstrapInit = false;
-function bootstrapAppInit() {
-  if (didBootstrapInit) {
+function init() {
+  gsap.registerPlugin(ScrollTrigger);
+  window.scrollTo(0, 0);
+
+  const heroBlastoise = document.querySelector("#hero-blastoise");
+  if (!heroBlastoise) {
     return;
   }
-  didBootstrapInit = true;
-  console.log("Bootstrapping initialization");
-  setTimeout(initializeBlastoiseHeroWhenReady, 500);
+
+  if (!heroBlastoise.complete || heroBlastoise.naturalWidth === 0) {
+    heroBlastoise.addEventListener("load", init, { once: true });
+    return;
+  }
+
+  const heroTitleOverlay = document.querySelector("#hero-title-overlay");
+  if (heroTitleOverlay) {
+    gsap.set(heroTitleOverlay, { opacity: 1, x: 0, y: 0 });
+  }
+
+  initBlastoiseHero();
+  initEntryReveal();
+  ScrollTrigger.refresh();
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', bootstrapAppInit, { once: true });
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init, { once: true });
 } else {
-  bootstrapAppInit();
+  init();
 }
