@@ -48,6 +48,7 @@ html,body{
     overflow: visible;
     background-color: #2d0000; /* Very dark red background - visible around hero image */
     z-index: 30;
+    pointer-events: none;
 }
 
 #hero-ruler{
