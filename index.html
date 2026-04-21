@@ -13,19 +13,11 @@
 <body>
     <div id="main">
         <div id="section-hero">
-            <nav>
-                <div id="right-nav">
-                </div>
-            </nav>
             <div class="hero-blastoise-container">
                 <div class="hero-image-wrapper">
                     <img src="assets/images/Blastoise-transparent-bg-10x.png" alt="Blastoise" id="hero-blastoise">
-                    <div class="zoom-target" id="zoom-target"></div>
                 </div>
-                <div class="entry-portal" id="entry-portal"></div>
             </div>
-            <div id="hero-hide-marker" aria-hidden="true">hide threshold</div>
-            <div id="hero-ruler" aria-hidden="true"></div>
         </div>
         <div id="section-entry">
             <div class="entry-content">
@@ -52,9 +44,9 @@
                     <div class="divider">⸻</div>
                     <div class="app-block">
                         <div class="app-title">
-                            <a href="/ditto/" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 1rem; text-decoration: none; color: inherit;">
-                                <img src="assets/images/Ditto-icon-1024px.png" alt="Ditto icon" width="56" height="56" style="width: 56px; height: 56px; border-radius: 12px; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(255,255,255,0.06);">
-                                <h3 style="margin: 0;">Ditto</h3>
+                            <a href="/ditto/" target="_blank" rel="noopener noreferrer" class="app-title-link">
+                                <img src="assets/images/Ditto-icon-1024px.png" alt="Ditto icon" width="56" height="56" class="app-icon">
+                                <h3>Ditto</h3>
                             </a>
                             <span class="coming-soon-badge">Coming Soon</span>
                         </div>
@@ -85,12 +77,10 @@
     <div id="hero-title-overlay" aria-label="Hero title">
         <h1>blastoise.app</h1>
     </div>
-    <div id="hero-debug-status" aria-live="polite">hero debug: initializing...</div>
-    <div id="entry-debug-status" aria-live="polite">entry: initializing...</div>
-    <div id="viewport-zero-line" aria-hidden="true"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha512-7eHRwcbYkK4d9g/6tD/mhkf++eoTHwpNM9woBxtPUBWm67zeAfFC+HrdoE2GanKeocly/VxeLvIqwvCdk7qScg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" integrity="sha512-onMTRKJBKz8M1TnqqDuGBlowlH0ohFzMXYRNebz+yOcc5TQr/zAKsthzhuv0hiyUKEiQEQXEynnXCvNTOk50dg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.1.14/bundled/lenis.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

@@ -1,18 +1,19 @@
 *{
-    margin: 0%;
-    padding: 0%;
+    margin: 0;
+    padding: 0;
     box-sizing: border-box;
 }
 
 html,body{
-    height: 100%;
     width: 100%;
+    background-color: #000;
+    overscroll-behavior-y: none;
 }
 
 #main{
     position: relative;
     overflow-x: hidden;
-    background-color: #000000;
+    background-color: #000;
     width: 100%;
 }
 
@@ -20,197 +21,70 @@ html,body{
     font-family: a;
     src: url(./assets/fonts/jost-variable.ttf);
 }
-@font-face{
-    font-family: b;
-    src: url(./assets/fonts/KFOLCnqEu92Fr1MmEU9fBBc4\ \(1\).ttf);
-}
-@font-face{
-    font-family: c;
-    src: url(./assets/fonts/KFOmCnqEu92Fr1Mu4mxK\ \(1\).ttf);
-}
 
 #section-hero{
-    height: 190vh; /* Midpoint between prior and current desktop runway */
-    height: 190dvh; /* Use dynamic viewport height for mobile browsers */
+    height: 100vh;
+    height: 100dvh;
     width: 100vw;
-    width: 100dvw; /* Use dynamic viewport width for mobile browsers */
     position: relative;
     overflow: hidden;
-    background-color: #2d0000; /* Very dark red background - visible around hero image */
+    background-color: #2d0000;
     z-index: 30;
     pointer-events: none;
-}
-
-#hero-ruler{
-    display: none;
-}
-
-.hero-ruler-line{
-    position: absolute;
-    left: 0;
-    right: 0;
-    border-top: 1px dashed rgba(57, 255, 20, 0.7);
-}
-
-.hero-ruler-line > span{
-    position: absolute;
-    left: 8px;
-    top: -10px;
-    padding: 1px 6px;
-    border-radius: 4px;
-    background: rgba(0, 0, 0, 0.75);
-    color: #39ff14;
-    font-family: monospace;
-    font-size: 11px;
-    line-height: 1.2;
-}
-
-#hero-hide-marker{
-    display: none;
-}
-
-#hero-debug-status{
-    display: none;
-}
-
-#entry-debug-status{
-    display: none;
-}
-
-#viewport-zero-line{
-    display: none;
+    contain: paint;
 }
 
 .hero-blastoise-container{
-    position: absolute !important; /* Section-bound; ScrollTrigger pinning controls viewport lock */
-    top: 0 !important;
-    left: 0 !important;
-    right: auto !important;
-    bottom: auto !important;
-    width: 100% !important;
-    height: 100vh !important;
-    height: 100dvh !important;
-    display: flex !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 20 !important; /* Lower z-index so text can appear above */
-    overflow: visible !important; /* Allow image to extend beyond container if needed */
-    background-color: #2d0000 !important; /* Red background to show around image */
+    z-index: 20;
+    overflow: visible;
+    background-color: #2d0000;
     pointer-events: none;
-    /* Ensure container is visible */
-    visibility: visible !important;
-    opacity: 1 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    /* Prevent iOS Safari address bar issues */
-    -webkit-overflow-scrolling: touch;
 }
 
 .hero-image-wrapper{
-    position: relative !important; /* Positioning context for zoom-target */
-    width: 100vw !important;
-    width: 100dvw !important;
-    height: 100vh !important;
-    height: 100dvh !important;
-    display: flex !important;
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
     align-items: center;
     justify-content: center;
+    will-change: transform;
+    backface-visibility: hidden;
+    transform: translateZ(0);
 }
 
 #hero-blastoise{
-    width: 100vw !important;
-    height: 100vh !important;
-    width: 100dvw !important;
-    height: 100dvh !important;
-    max-width: none !important;
-    max-height: none !important;
-    min-width: 100vw !important;
-    min-height: 100vh !important;
-    object-fit: contain !important; /* Show full image without cropping */
-    object-position: 55% 45% !important; /* Shift image slightly right and up to avoid bottom-left text */
-    /* transform-origin is set dynamically by JavaScript based on entry-portal position */
-    will-change: transform;
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
-    backface-visibility: hidden;
-    /* Ensure image scales properly on all devices */
-    -webkit-transform: translateZ(0);
-    transform: translateZ(0);
-    -webkit-backface-visibility: hidden;
-    transition: none;
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    position: relative !important; /* Make image a positioning context for zoom-target */
-    z-index: 15; /* Very high to ensure it's on top */
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    object-fit: contain;
+    object-position: 55% 45%;
+    display: block;
+    z-index: 15;
     pointer-events: none;
-    /* Don't force transform - let GSAP control it */
-    margin: 0 !important;
-    padding: 0 !important;
-    flex-shrink: 0 !important;
+    flex-shrink: 0;
 }
 
-/* Mobile-specific styles for hero container */
 @media (max-width: 640px) {
-    .hero-blastoise-container {
-        /* Ensure proper height on mobile devices */
-        height: 100vh;
-        height: -webkit-fill-available; /* iOS Safari fallback */
-        height: 100dvh; /* Modern mobile browsers */
-    }
-    
-    #section-hero {
-        /* Midpoint between prior and current mobile runway */
-        height: 158vh;
-        height: 158dvh;
-    }
-    
-    #hero-blastoise {
-        /* Optimize image rendering on mobile */
-        image-rendering: auto; /* Better performance on mobile */
-        object-position: 50% 50%; /* Keep centered on small screens */
-    }
-    
-    #hero-title-overlay{
-        bottom: 25% !important; /* Move text higher on mobile */
-    }
     #hero-blastoise{
-        object-position: 50% 50%; /* Keep centered on small screens */
+        object-position: 50% 50%;
     }
     #hero-title-overlay{
-        bottom: 25% !important; /* Move text higher on mobile */
+        bottom: 25%;
     }
     #hero-title-overlay>h1{
         font-size: clamp(1.5rem, 7vw, 3rem);
     }
-}
-
-.entry-portal{
-    position: absolute;
-    width: 100px;
-    height: 180px;
-    left: 18%;
-    top: 42%;
-    background: radial-gradient(ellipse at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 30%, rgba(0,0,0,1) 100%);
-    border-radius: 25% 25% 35% 35%;
-    pointer-events: none;
-    opacity: 0;
-    transform: scale(0.1);
-    z-index: 2;
-    box-shadow: inset 0 0 100px rgba(0,0,0,1);
-    transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.zoom-target{
-    position: absolute;
-    width: 10px;
-    height: 10px;
-    left: 0;
-    top: 0;
-    pointer-events: none;
-    opacity: 0 !important;
-    display: none;
-    transform: translate(-50%, -50%);
 }
 
 #section-entry{
@@ -320,6 +194,26 @@ html,body{
     margin-bottom: 0.75rem;
 }
 
+.app-title-link{
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    text-decoration: none;
+    color: inherit;
+}
+
+.app-title-link h3{
+    margin: 0;
+}
+
+.app-icon{
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
 .coming-soon-badge{
     font-family: a;
     font-size: 0.85rem;
@@ -406,85 +300,15 @@ html,body{
     max-width: 100%;
 }
 
-.download-btn{
-    padding: 12px 28px;
-    border: 1px solid #fff;
-    background-color: transparent;
-    color: #fff;
-    font-size: 1.2vw;
-    font-family: a;
-    cursor: pointer;
-    border-radius: 50px;
-    transition: background-color 0.3s ease, transform 0.3s ease;
-}
-
-.download-btn:hover{
-    background-color: rgba(255, 255, 255, 0.1);
-    transform: translateY(-2px);
-}
-
-#section-hero>nav{
-    position: absolute;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0px 30px;
-    display: flex;
-    height: 10vh;
-    width: 100vw;
-}
-
-#section-hero>nav>img{
-    width: 9%;
-    margin-top: -1.7vw;
-}
-
-#right-nav{
-    display: flex;
-    gap: 1vw;
-    align-items: center;
-}
-
-#right-nav>button{
-    padding: 10px 24px;
-    border-radius: 50px;
-    border: 1px solid #fff;
-    background-color: #0b48ed;
-    color: #fff;
-    font-family: a;
-    font-size: 15px;
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.3s ease;
-}
-
-#right-nav>button:hover{
-    background-color: #0c52ff;
-    transform: translateY(-1px);
-}
-
-#right-nav>button:last-child{
-    padding: 10px 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
 #hero-title-overlay{
-    position: fixed !important; /* Fixed to viewport so it stays visible with hero container */
-    bottom: 8% !important; /* Position at bottom left - stays in place */
-    height: auto;
-    width: auto;
-    left: 5% !important;
-    right: auto;
-    display: flex !important;
+    position: fixed;
+    bottom: 8%;
+    left: 5%;
+    display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 2vw;
-    z-index: 101 !important; /* Higher than hero container (20) so text appears above */
-    opacity: 1;
-    visibility: visible !important;
-    transition: none !important; /* No transition - opacity controlled by GSAP */
-    transform: none !important; /* No transforms - keep it in place */
-    /* Ensure it doesn't overlap with hero image */
+    z-index: 101;
     max-width: 40%;
     pointer-events: none;
 }
@@ -551,12 +375,3 @@ html,body{
     padding: 0 5vw;
 }
 
-/* Hide Locomotive Scroll indicator */
-[data-scroll-container]::before,
-[data-scroll-container]::after,
-.c-scrollbar,
-.c-scrollbar_thumb {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-}
