@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ditto – blastoise.app</title>
+    <meta name="description" content="Never lose what you copied. Ditto saves your clipboard history, stores snippets you reuse, and reads text aloud — all from one keyboard shortcut.">
+    <link rel="icon" type="image/png" href="/assets/images/Blastoise-transparent-bg.png">
+    <link rel="apple-touch-icon" href="/assets/images/Blastoise-transparent-bg.png">
+    <link rel="preload" as="image" href="/assets/images/Ditto-icon-1024px.png">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet"/>
+    <style>
+        @font-face {
+            font-family: a;
+            src: url(/assets/fonts/jost-variable.ttf);
+            font-display: swap;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            background: #000;
+            color: #fff;
+            font-family: a, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        a { color: inherit; text-decoration: none; }
+
+        .page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav {
+            padding: 3vh 5vw 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .back-link {
+            font-size: 0.95rem;
+            opacity: 0.6;
+            transition: opacity 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .back-link:hover { opacity: 1; }
+
+        .content {
+            max-width: 760px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 2vh 5vw 6vh;
+            flex: 1;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 6vh 0 3vh;
+        }
+        .hero-icon {
+            width: 160px;
+            height: 160px;
+            border-radius: 34px;
+            display: block;
+            margin: 0 auto 2.25rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06);
+        }
+        .hero h1 {
+            font-family: a;
+            font-size: clamp(2.75rem, 6vw, 5rem);
+            font-weight: 100;
+            line-height: 1.1;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+        .hero .tagline {
+            font-size: clamp(1.1rem, 2vw, 1.45rem);
+            font-weight: 200;
+            opacity: 0.85;
+            margin-bottom: 1.25rem;
+        }
+        .hero .promo {
+            font-size: clamp(1rem, 1.4vw, 1.15rem);
+            opacity: 0.6;
+            line-height: 1.6;
+            max-width: 540px;
+            margin: 0 auto 2.5rem;
+        }
+        .hero-cta {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.85rem;
+        }
+
+        .app-store-link {
+            display: inline-block;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .app-store-link:hover { opacity: 0.85; transform: translateY(-2px); }
+        .app-store-badge {
+            height: clamp(44px, 6vw, 54px);
+            width: auto;
+            display: block;
+        }
+        .hero-hint {
+            font-size: 0.85rem;
+            opacity: 0.4;
+            letter-spacing: 0.02em;
+        }
+
+        .divider {
+            font-size: clamp(1rem, 2vw, 1.5rem);
+            opacity: 0.35;
+            margin: 3rem 0;
+            text-align: center;
+        }
+
+        .features {
+            display: flex;
+            flex-direction: column;
+            gap: 0.875rem;
+        }
+        .feature {
+            display: flex;
+            gap: 1.25rem;
+            align-items: flex-start;
+            padding: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.02);
+            transition: border-color 0.3s ease, background 0.3s ease;
+        }
+        .feature:hover {
+            border-color: rgba(255, 255, 255, 0.16);
+            background: rgba(255, 255, 255, 0.035);
+        }
+        .feature-icon {
+            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        .feature-body { flex: 1; min-width: 0; }
+        .feature-title {
+            font-size: 1.05rem;
+            font-weight: 300;
+            margin-bottom: 0.25rem;
+        }
+        .feature-desc {
+            font-size: 0.95rem;
+            opacity: 0.6;
+            line-height: 1.5;
+        }
+
+        .pillars {
+            display: flex;
+            flex-direction: column;
+            gap: 3rem;
+        }
+        .pillar h2 {
+            font-size: clamp(1.5rem, 3vw, 2rem);
+            font-weight: 200;
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.01em;
+        }
+        .pillar p {
+            font-size: clamp(1rem, 1.4vw, 1.1rem);
+            opacity: 0.7;
+            line-height: 1.65;
+        }
+
+        .about {
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 0.95rem;
+            opacity: 0.5;
+            line-height: 1.6;
+            text-align: center;
+        }
+
+        footer {
+            padding: 3vh 5vw;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .footer-links {
+            display: flex;
+            align-items: center;
+            gap: 2.5vw;
+            justify-content: flex-start;
+            max-width: 1200px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+        }
+        .footer-links p,
+        .footer-links a {
+            font-size: 0.9rem;
+            color: #fff;
+            opacity: 0.55;
+            display: flex;
+            align-items: center;
+            transition: opacity 0.3s ease;
+        }
+        .footer-links a:hover { opacity: 1; }
+        .footer-social-icon { height: 0.95rem; width: auto; }
+
+        @media (max-width: 640px) {
+            .content { padding: 2vh 6vw 5vh; }
+            .hero { padding: 4vh 0 2vh; }
+            .hero-icon { width: 128px; height: 128px; border-radius: 28px; margin-bottom: 1.75rem; }
+            .feature { padding: 1rem; gap: 1rem; }
+            .feature-icon { width: 36px; height: 36px; }
+            .footer-links {
+                gap: 4vw;
+                row-gap: 3vw;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <nav class="nav">
+            <a href="/" class="back-link"><i class="ri-arrow-left-line"></i> Back to blastoise.app</a>
+        </nav>
+
+        <main class="content">
+            <section class="hero">
+                <img src="/assets/images/Ditto-icon-1024px.png" alt="Ditto app icon" class="hero-icon" width="160" height="160">
+                <h1>Ditto</h1>
+                <p class="tagline">Never lose what you copied.</p>
+                <p class="promo">Ditto saves your clipboard history, stores snippets you reuse, and reads text aloud — all from one keyboard shortcut.</p>
+                <div class="hero-cta">
+                    <a href="#" class="app-store-link" data-ditto-mas-placeholder target="_blank" rel="noopener noreferrer">
+                        <img src="/assets/buttons/mac-app-store-badge.svg" alt="Download on the Mac App Store" class="app-store-badge">
+                    </a>
+                    <span class="hero-hint">Coming soon to the Mac App Store</span>
+                </div>
+            </section>
+
+            <div class="divider">⸻</div>
+
+            <section class="features">
+                <div class="feature">
+                    <div class="feature-icon"><i class="ri-keyboard-line"></i></div>
+                    <div class="feature-body">
+                        <div class="feature-title">Full clipboard history, one shortcut away</div>
+                        <div class="feature-desc">Pull up everything you've copied with a single keyboard shortcut.</div>
+                    </div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon"><i class="ri-search-line"></i></div>
+                    <div class="feature-body">
+                        <div class="feature-title">Search past copies instantly</div>
+                        <div class="feature-desc">Type a few letters of what you're looking for and jump right to it.</div>
+                    </div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon"><i class="ri-file-copy-line"></i></div>
+                    <div class="feature-body">
+                        <div class="feature-title">Reusable snippets library</div>
+                        <div class="feature-desc">Save email replies, code blocks, addresses, and canned responses for one-shortcut access.</div>
+                    </div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon"><i class="ri-volume-up-line"></i></div>
+                    <div class="feature-body">
+                        <div class="feature-title">Read aloud in a natural voice</div>
+                        <div class="feature-desc">Hear any clipboard content read back — great for proofreading.</div>
+                    </div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon"><i class="ri-command-line"></i></div>
+                    <div class="feature-body">
+                        <div class="feature-title">Custom hotkeys, anywhere</div>
+                        <div class="feature-desc">Summon Ditto from any app without breaking flow.</div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="divider">⸻</div>
+
+            <section class="pillars">
+                <div class="pillar">
+                    <h2>Native and lightweight</h2>
+                    <p>Built in SwiftUI. Ditto lives in your menu bar, uses almost no memory, and launches instantly. No Electron bloat, no background drain.</p>
+                </div>
+                <div class="pillar">
+                    <h2>Private by design</h2>
+                    <p>Your clipboard history stays on your Mac. Nothing gets sent to a server, nothing syncs anywhere you didn't ask for. You decide what's saved and when it clears.</p>
+                </div>
+                <div class="pillar">
+                    <h2>Made for the way you already work</h2>
+                    <p>If you've ever copied something, copied something else, and realized you needed the first one back — Ditto is for you. That moment of "wait, what did I just lose" disappears the first day you install it.</p>
+                </div>
+            </section>
+
+            <p class="about">Ditto is made by Blastoise, a small software studio in San Francisco building the tools we wanted for ourselves.</p>
+        </main>
+
+        <footer>
+            <div class="footer-links">
+                <p>© 2026 Blastoise, LLC</p>
+                <a href="/contact/" target="_blank" rel="noopener noreferrer">Contact</a>
+                <a href="/terms/" target="_blank" rel="noopener noreferrer">Terms and Conditions</a>
+                <a href="/privacy/" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+                <a href="https://x.com" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)"><i class="ri-twitter-x-line"></i></a>
+                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><img src="/assets/images/linkedin-logo.svg" alt="LinkedIn" class="footer-social-icon"></a>
+            </div>
+        </footer>
+    </div>
+</body>
+</html>
