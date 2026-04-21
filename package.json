@@ -20,5 +20,8 @@
   "homepage": "https://github.com/Blastoise-app/blastoise.app-website#readme",
   "dependencies": {
     "playwright": "^1.58.2"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.5"
   }
 }

@@ -75,6 +75,19 @@ html,body{
     flex-shrink: 0;
 }
 
+#hero-blastoise-canvas{
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    object-fit: cover;
+    display: block;
+    z-index: 15;
+    pointer-events: none;
+}
+
 @media (max-width: 640px) {
     #hero-blastoise{
         object-position: 50% 50%;
@@ -127,11 +140,6 @@ html,body{
         flex-wrap: wrap;
         gap: 4vw;
         row-gap: 3vw;
-    }
-
-    .footer-links p,
-    .footer-links a{
-        font-size: 3.2vw;
     }
 }
 
@@ -330,16 +338,21 @@ html,body{
     justify-content: flex-start;
 }
 
+.footer-legal,
+.footer-social{
+    display: contents;
+}
+
 .footer-links p{
     margin: 0;
-    font-size: 1.2vw;
+    font-size: clamp(14px, 1.2vw, 18px);
     opacity: 0.7;
     font-family: a;
     color: #fff;
 }
 
 .footer-links a{
-    font-size: 1.2vw;
+    font-size: clamp(14px, 1.2vw, 18px);
     color: #fff;
     text-decoration: none;
     opacity: 0.7;
@@ -354,14 +367,39 @@ html,body{
 }
 
 .footer-social-icon{
-    height: 1.2vw;
+    height: clamp(14px, 1.2vw, 18px);
     width: auto;
     display: block;
 }
 
 @media (max-width: 768px) {
     .footer-social-icon{
-        height: 3.2vw;
+        height: clamp(13px, 3.6vw, 16px);
+    }
+
+    .footer-links{
+        flex-direction: column;
+        align-items: center;
+        gap: 2.5vw;
+        width: 100%;
+    }
+
+    .footer-legal,
+    .footer-social{
+        display: flex;
+        gap: 4vw;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .footer-links .footer-copyright{
+        order: 3;
+        font-size: clamp(11px, 3vw, 14px);
+    }
+
+    .footer-links p,
+    .footer-links a{
+        font-size: clamp(13px, 3.6vw, 16px);
     }
 }
 

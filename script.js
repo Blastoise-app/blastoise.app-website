@@ -1,166 +1,96 @@
-function initBlastoiseHero() {
-  const heroBlastoise = document.querySelector("#hero-blastoise");
+const HERO_FRAME_COUNT = 90;
+
+function pickHeroProfile() {
+  return window.innerWidth < window.innerHeight ? "mobile" : "desktop";
+}
+
+function preloadHeroFrames(profile) {
+  const loads = [];
+  const images = [];
+  for (let i = 0; i < HERO_FRAME_COUNT; i++) {
+    const img = new Image();
+    const n = String(i).padStart(3, "0");
+    img.src = `assets/images/hero-sequence/${profile}/frame-${n}.webp`;
+    images.push(img);
+    loads.push(
+      new Promise((resolve) => {
+        if (img.complete && img.naturalWidth > 0) return resolve(img);
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+      })
+    );
+  }
+  return Promise.all(loads).then((results) => {
+    const ok = results.every((r) => r !== null);
+    return { ok, images };
+  });
+}
+
+function initBlastoiseHero(frames) {
+  const heroImg = document.querySelector("#hero-blastoise");
   const heroSection = document.querySelector("#section-hero");
+  if (!heroImg || !heroSection) return;
 
-  if (!heroBlastoise || !heroSection) {
-    return;
+  const wrapper = heroImg.parentElement;
+
+  // Replace the img with a canvas, same layout box
+  const canvas = document.createElement("canvas");
+  canvas.id = "hero-blastoise-canvas";
+  canvas.width = frames[0].naturalWidth;
+  canvas.height = frames[0].naturalHeight;
+  wrapper.appendChild(canvas);
+  heroImg.style.display = "none";
+
+  const ctx = canvas.getContext("2d", { alpha: false });
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+  let currentFrame = -1;
+  function drawFrame(idx) {
+    const i = Math.max(0, Math.min(HERO_FRAME_COUNT - 1, idx));
+    if (i === currentFrame) return;
+    currentFrame = i;
+    ctx.drawImage(frames[i], 0, 0, canvas.width, canvas.height);
+  }
+  drawFrame(0);
+
+  const heroTitleOverlay = document.querySelector("#hero-title-overlay");
+  const setHeroHidden = (hidden) => {
+    heroSection.style.opacity = hidden ? "0" : "1";
+    heroSection.style.visibility = hidden ? "hidden" : "visible";
+  };
+  if (heroTitleOverlay) {
+    gsap.set(heroTitleOverlay, { opacity: 1 });
   }
 
-  const heroWrapper = heroBlastoise.parentElement;
-  gsap.killTweensOf(heroWrapper);
-
-  // Calibrated shell-opening position on the image content (responsive-safe baseline)
-  const TARGET_X = 0.3765;
-  const TARGET_Y = 0.408;
-  const FALLBACK_ORIGIN = `${TARGET_X * 100}% ${TARGET_Y * 100}%`;
-
-  function parseObjectPositionAxis(value) {
-    if (!value) return 0.5;
-    if (value.endsWith("%")) {
-      const num = parseFloat(value);
-      return Number.isFinite(num) ? num / 100 : 0.5;
-    }
-    if (value === "left" || value === "top") return 0;
-    if (value === "right" || value === "bottom") return 1;
-    return 0.5;
-  }
-
-  // Returns { transformOrigin, translation } for the zoom animation, or null if the
-  // image hasn't loaded yet. Locates the calibrated target point on the displayed
-  // image and produces the wrapper-relative origin + a viewport-centering translation.
-  function computeZoomGeometry() {
-    const container = heroWrapper.parentElement;
-    const containerRect = container.getBoundingClientRect();
-    const wrapperRect = heroWrapper.getBoundingClientRect();
-    const nw = heroBlastoise.naturalWidth;
-    const nh = heroBlastoise.naturalHeight;
-
-    if (!nw || !nh || !wrapperRect.width || !wrapperRect.height) return null;
-
-    // object-fit: contain — compute displayed image size inside the container
-    const containerAspect = containerRect.width / containerRect.height;
-    const imageAspect = nw / nh;
-    let displayedWidth, displayedHeight;
-    if (containerAspect > imageAspect) {
-      displayedHeight = containerRect.height;
-      displayedWidth = displayedHeight * imageAspect;
-    } else {
-      displayedWidth = containerRect.width;
-      displayedHeight = displayedWidth / imageAspect;
-    }
-
-    // object-position offset of the displayed image within the container
-    const [posX, posY = "50%"] = (getComputedStyle(heroBlastoise).objectPosition || "50% 50%").split(" ");
-    const objX = parseObjectPositionAxis(posX);
-    const objY = parseObjectPositionAxis(posY);
-    const imageOffsetX = (containerRect.width - displayedWidth) * objX;
-    const imageOffsetY = (containerRect.height - displayedHeight) * objY;
-
-    // Target point in wrapper-relative pixels (wrapper and container are coincident)
-    const targetX = imageOffsetX + displayedWidth * TARGET_X;
-    const targetY = imageOffsetY + displayedHeight * TARGET_Y;
-    const percentX = (targetX / wrapperRect.width) * 100;
-    const percentY = (targetY / wrapperRect.height) * 100;
-
-    return {
-      transformOrigin: `${percentX}% ${percentY}%`,
-      translation: {
-        x: window.innerWidth / 2 - (wrapperRect.left + targetX),
-        y: window.innerHeight / 2 - (wrapperRect.top + targetY)
+  ScrollTrigger.create({
+    trigger: heroSection,
+    start: "top top",
+    end: () => `+=${window.innerHeight * (window.innerWidth <= 640 ? 1.1 : 1.2)}`,
+    scrub: 0.1,
+    pin: true,
+    anticipatePin: 1,
+    invalidateOnRefresh: true,
+    onUpdate: function (self) {
+      const p = Math.max(0, Math.min(1, self.progress || 0));
+      drawFrame(Math.round(p * (HERO_FRAME_COUNT - 1)));
+      if (heroTitleOverlay) {
+        const fadeStart = 0.72;
+        const titleOpacity = p <= fadeStart ? 1 : Math.max(0, 1 - (p - fadeStart) / (1 - fadeStart));
+        heroTitleOverlay.style.opacity = titleOpacity;
       }
-    };
-  }
-
-  const initialGeometry = computeZoomGeometry();
-  gsap.set(heroWrapper, {
-    scale: 1,
-    x: 0,
-    y: 0,
-    transformOrigin: initialGeometry ? initialGeometry.transformOrigin : FALLBACK_ORIGIN,
-    force3D: true
+    },
+    onLeave: function () {
+      setHeroHidden(true);
+      if (playEntryReveal) playEntryReveal();
+    },
+    onEnterBack: function () {
+      setHeroHidden(false);
+      if (resetEntryReveal) resetEntryReveal();
+    },
   });
 
-  // Set up scroll-zoom animation immediately
-  setTimeout(() => {
-    const isMobile = window.innerWidth <= 640;
-    const finalScale = isMobile ? 180 : 90;
-
-    const heroContainerEl = document.querySelector(".hero-blastoise-container");
-    const geometry = computeZoomGeometry() || { transformOrigin: FALLBACK_ORIGIN, translation: { x: 0, y: 0 } };
-
-    gsap.set(heroWrapper, {
-      transformOrigin: geometry.transformOrigin,
-      force3D: true,
-      scale: 1,
-      x: 0,
-      y: 0
-    });
-
-    const heroTitleOverlay = document.querySelector("#hero-title-overlay");
-    const setHeroHidden = (hidden) => {
-      heroSection.style.opacity = hidden ? "0" : "1";
-      heroSection.style.visibility = hidden ? "hidden" : "visible";
-    };
-    if (heroTitleOverlay) {
-      gsap.set(heroTitleOverlay, { opacity: 1 });
-    }
-    let zoomAnimation;
-    zoomAnimation = gsap.to(heroWrapper, {
-      scale: finalScale,
-      x: geometry.translation.x,
-      y: geometry.translation.y,
-      ease: "power2.in",
-      force3D: true,
-      scrollTrigger: {
-        trigger: heroSection,
-        start: "top top",
-        end: () => `+=${window.innerHeight * (window.innerWidth <= 640 ? 1.1 : 1.2)}`,
-        scrub: 0.1,
-        pin: true,
-        anticipatePin: 1,
-        invalidateOnRefresh: true,
-        onUpdate: function(self) {
-          if (!heroTitleOverlay) return;
-          const p = Math.max(0, Math.min(1, self.progress || 0));
-          const fadeStart = 0.72;
-          const titleOpacity = p <= fadeStart ? 1 : Math.max(0, 1 - (p - fadeStart) / (1 - fadeStart));
-          heroTitleOverlay.style.opacity = titleOpacity;
-        },
-        onLeave: function() {
-          setHeroHidden(true);
-          if (playEntryReveal) playEntryReveal();
-        },
-        onEnterBack: function() {
-          setHeroHidden(false);
-          if (resetEntryReveal) resetEntryReveal();
-        },
-        // Recalculate origin, translation, and scale on resize for full responsiveness
-        onRefresh: function() {
-          const g = computeZoomGeometry();
-          if (!g) return;
-          gsap.set(heroWrapper, {
-            transformOrigin: g.transformOrigin,
-            force3D: true,
-            scale: 1,
-            x: 0,
-            y: 0
-          });
-          if (zoomAnimation) {
-            zoomAnimation.vars.x = g.translation.x;
-            zoomAnimation.vars.y = g.translation.y;
-            zoomAnimation.vars.scale = window.innerWidth <= 640 ? 180 : 90;
-            zoomAnimation.invalidate();
-          }
-        },
-      }
-    });
-
-    if (heroContainerEl) {
-      heroContainerEl.style.zIndex = "20";
-    }
-
-    ScrollTrigger.refresh();
-  }, 100);
+  ScrollTrigger.refresh();
 }
 
 // Entry section: fade in on hero onLeave, no scroll locking.
@@ -228,24 +158,20 @@ function init() {
   window.scrollTo(0, 0);
   initSmoothScroll();
 
-  const heroBlastoise = document.querySelector("#hero-blastoise");
-  if (!heroBlastoise) {
-    return;
-  }
-
-  if (!heroBlastoise.complete || heroBlastoise.naturalWidth === 0) {
-    heroBlastoise.addEventListener("load", init, { once: true });
-    return;
-  }
-
   const heroTitleOverlay = document.querySelector("#hero-title-overlay");
   if (heroTitleOverlay) {
     gsap.set(heroTitleOverlay, { opacity: 1, x: 0, y: 0 });
   }
 
-  initBlastoiseHero();
   initEntryReveal();
-  ScrollTrigger.refresh();
+
+  preloadHeroFrames(pickHeroProfile()).then(({ ok, images }) => {
+    if (!ok) {
+      console.warn("Hero frame sequence failed to load; hero image will stay static.");
+      return;
+    }
+    initBlastoiseHero(images);
+  });
 }
 
 if ("scrollRestoration" in history) {
