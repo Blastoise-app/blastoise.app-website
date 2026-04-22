@@ -372,6 +372,14 @@ h2 + .h2-price { font-family: var(--mono); font-size: 18px; color: var(--text-se
 
 <div style="border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 28px 28px 24px; margin-bottom: 20px;">
 
+  <div style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border);">
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+      <div style="font-size: 20px; font-weight: 600; letter-spacing: -0.2px;">Build your package</div>
+      <span class="tier-badge tier-should" style="font-size: 11px;">interactive</span>
+    </div>
+    <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.5;">Pick the options you want below — the total updates live so you can see exactly what the engagement will cost.</div>
+  </div>
+
   <div style="margin-bottom: 24px;">
     <div style="font-size: 16px; font-weight: 500; margin-bottom: 12px;">UI improvements</div>
     <label style="display: flex; align-items: center; gap: 10px; padding: 10px 0; cursor: pointer; font-size: 15px; color: var(--text-secondary); border-bottom: 0.5px solid var(--border);">
@@ -413,7 +421,10 @@ h2 + .h2-price { font-family: var(--mono); font-size: 18px; color: var(--text-se
   </div>
 
   <div style="border-top: 1px solid var(--border); padding-top: 20px; display: flex; justify-content: space-between; align-items: baseline;">
-    <div style="font-size: 16px; color: var(--text-secondary);">Total</div>
+    <div>
+      <div style="font-size: 16px; color: var(--text-primary); font-weight: 500;">Your total</div>
+      <div style="font-size: 13px; color: var(--text-tertiary); margin-top: 2px;">Based on the options selected above</div>
+    </div>
     <div id="calcTotal" style="font-size: 32px; font-weight: 600; font-family: var(--mono);">$0</div>
   </div>
 
