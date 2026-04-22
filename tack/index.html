@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Tack — Project Proposal</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f7f7f5;
+  --bg-tertiary: #f0efec;
+  --text-primary: #1a1a1a;
+  --text-secondary: #6b6b6b;
+  --text-tertiary: #9a9a9a;
+  --border: rgba(0,0,0,0.1);
+  --border-hover: rgba(0,0,0,0.2);
+  --green-bg: #e6f5ec; --green-text: #0f6e56;
+  --amber-bg: #faeeda; --amber-text: #854f0b;
+  --red-bg: #fcebeb; --red-text: #a32d2d;
+  --blue-bg: #e6f1fb; --blue-text: #185fa5;
+  --purple-bg: #eeedfe; --purple-text: #534ab7;
+  --font: 'DM Sans', -apple-system, system-ui, sans-serif;
+  --mono: 'DM Mono', monospace;
+  --radius: 10px;
+  --radius-lg: 14px;
+}
+html { scroll-behavior: smooth; scroll-padding-top: 60px; }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #242422;
+    --bg-tertiary: #2c2c2a;
+    --text-primary: #ffffff;
+    --text-secondary: #e0e0dc;
+    --text-tertiary: #c0c0bc;
+    --border: rgba(255,255,255,0.08);
+    --border-hover: rgba(255,255,255,0.15);
+    --green-bg: #0a2e1f; --green-text: #5dcaa5;
+    --amber-bg: #2a1d08; --amber-text: #fac775;
+    --red-bg: #2a1010; --red-text: #f09595;
+    --blue-bg: #0a1a2a; --blue-text: #85b7eb;
+    --purple-bg: #1a1830; --purple-text: #afa9ec;
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: var(--font); background: var(--bg-primary); color: var(--text-primary); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+.container { max-width: 880px; margin: 0 auto; padding: 60px 24px 80px; }
+.toc { position: fixed; left: 0; top: 0; height: 100vh; width: 180px; background: transparent; padding: 60px 0 32px; overflow-y: auto; z-index: 100; }
+.toc a { display: block; padding: 8px 20px; font-size: 13px; color: var(--text-tertiary); text-decoration: none; border-left: 2px solid transparent; transition: color 0.15s, border-color 0.15s; }
+.toc a:hover { color: var(--text-primary); }
+.toc a.active { color: var(--text-primary); border-left-color: var(--text-primary); font-weight: 500; }
+@media (max-width: 1200px) { .toc { display: none; } }
+h1 { font-size: 38px; font-weight: 600; letter-spacing: -0.5px; margin-bottom: 10px; }
+.subtitle { font-size: 18px; color: var(--text-secondary); margin-bottom: 48px; line-height: 1.6; }
+h2 { font-size: 26px; font-weight: 600; letter-spacing: -0.3px; margin-bottom: 8px; margin-top: 56px; }
+h2 + .h2-price { font-family: var(--mono); font-size: 18px; color: var(--text-secondary); margin-bottom: 22px; }
+.divider { height: 1px; background: var(--border); margin: 56px 0; }
+.scope-items { font-size: 16px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 28px; }
+.scope-items p { margin-bottom: 4px; }
+.ms { position: relative; padding: 0 0 0 30px; margin-bottom: 22px; }
+.ms:last-child { margin-bottom: 0; }
+.ms::before { content: ''; position: absolute; left: 8px; top: 28px; bottom: -22px; width: 1px; background: var(--border); }
+.ms:last-child::before { display: none; }
+.dot { position: absolute; left: 0; top: 6px; width: 17px; height: 17px; border-radius: 50%; border: 2px solid var(--border-hover); background: var(--bg-primary); }
+.dot-purple { border-color: var(--purple-text); background: var(--purple-text); }
+.dot-green { border-color: var(--green-text); background: var(--green-text); }
+.dot-blue { border-color: var(--blue-text); background: var(--blue-text); }
+.dot-amber { border-color: var(--amber-text); background: var(--amber-text); }
+.ms-header { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.ms-date { font-size: 14px; color: var(--text-secondary); font-weight: 500; }
+.ms-title { font-size: 18px; font-weight: 500; color: var(--text-primary); margin-top: 1px; }
+.ms-body { font-size: 15px; color: var(--text-secondary); line-height: 1.6; margin-top: 5px; }
+.ms-deliver { font-size: 15px; color: var(--text-primary); margin-top: 6px; font-weight: 500; }
+.ms-tag { display: inline-block; font-size: 13px; padding: 3px 10px; border-radius: 6px; font-weight: 500; }
+.ms-pay { background: var(--green-bg); color: var(--green-text); }
+.ms-launch { background: var(--blue-bg); color: var(--blue-text); }
+.ms-travel { background: var(--amber-bg); color: var(--amber-text); }
+.ms-inc { background: var(--bg-secondary); color: var(--text-secondary); }
+.summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 28px; }
+.summary-grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; margin-top: 28px; }
+.scard { padding: 16px 18px; border-radius: var(--radius-lg); background: var(--bg-secondary); }
+.scard-label { font-size: 14px; color: var(--text-secondary); margin-bottom: 3px; }
+.scard-val { font-size: 24px; font-weight: 600; font-family: var(--mono); }
+.scard-sub { font-size: 13px; color: var(--text-tertiary); margin-top: 2px; }
+.note-box { font-size: 15px; color: var(--text-secondary); line-height: 1.6; margin-top: 16px; padding: 16px 18px; background: var(--bg-secondary); border-radius: var(--radius); }
+.note-box strong { font-weight: 500; color: var(--text-primary); }
+.tier { padding: 16px 20px; border-radius: var(--radius); border: 0.5px solid var(--border); margin-bottom: 12px; }
+.tier-label { font-size: 14px; font-weight: 500; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+.tier-badge { font-size: 12px; padding: 2px 8px; border-radius: 4px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+.tier-must { background: var(--green-bg); color: var(--green-text); }
+.tier-should { background: var(--blue-bg); color: var(--blue-text); }
+.tier-stretch { background: var(--purple-bg); color: var(--purple-text); }
+.tier-body { font-size: 15px; color: var(--text-secondary); line-height: 1.6; }
+.rebuild-banner { padding: 16px 18px; border-radius: var(--radius); background: var(--blue-bg); color: var(--blue-text); font-size: 15px; font-weight: 500; margin-bottom: 20px; }
+@media (max-width: 700px) { .summary-grid, .summary-grid-4 { grid-template-columns: 1fr; } h1 { font-size: 26px; } .container { padding: 40px 16px 60px; } }
+</style>
+</head>
+<body>
+
+<nav class="toc" id="toc">
+  <a href="#ui-improvements">UI improvements</a>
+  <a href="#website">Website</a>
+  <a href="#launch-advisory">Launch + product advisory</a>
+  <a href="#project-timeline">Project timeline</a>
+  <a href="#full-rebuild">Full platform rebuild</a>
+  <a href="#summary">Summary</a>
+</nav>
+
+<div class="container">
+
+<h1>Tack — Proposal</h1>
+<p class="subtitle">Everything needed to get Tack launch-ready for the June 8th Engage event and set the foundation for long-term growth — from UI improvements and a marketing website to launch strategy, product advisory, and a full platform rebuild.</p>
+
+<h2 id="ui-improvements">UI improvements</h2>
+<div class="h2-price">$3,000–8,000 · based on tier</div>
+<p class="scope-items">Front-end improvements to the existing Tack application. All code delivered as pull requests for Eric and/or the dev team to review and merge. Backend work (database changes, API updates) is handled separately by Eric and/or the dev team. Work is prioritized in three tiers to protect the June 8th deadline:</p>
+
+<div class="tier">
+  <div class="tier-label">Tier 1 <span class="tier-badge tier-must">must ship · $3,000</span></div>
+  <div class="tier-body">Reporting feature with a PDF download button — filters, summary view, data display. Front-end forms and buttons for the three new data fields (total package price, billable / non-billable toggle, event date). Set up user analytics. Add a share button so users can spread the word and a feedback button so users can report issues directly.</div>
+</div>
+
+<div class="tier">
+  <div class="tier-label">Tier 2 <span class="tier-badge tier-should">should ship · $5,000</span></div>
+  <div class="tier-body">Polished version of the reporting feature with better visuals and more filtering options. Redesign key views to improve clarity — especially the time entry flow, dashboard layout, and framework navigation. Add refer-a-friend discount codes and user analytics with session replay to see how people actually use the app.</div>
+</div>
+
+<div class="tier">
+  <div class="tier-label">Tier 3 <span class="tier-badge tier-stretch">stretch · $8,000</span></div>
+  <div class="tier-body">Bigger design rethinking — improved framework navigation, better onboarding flow, clearer visual distinction between "On the Business" and "In the Business." Making the app genuinely intuitive for non-technical wedding planners.</div>
+</div>
+
+<div style="margin-top: 28px;">
+  <div class="ms">
+    <div class="dot dot-purple"></div>
+    <div class="ms-header"><span class="ms-date">Apr 23–May 3</span></div>
+    <div class="ms-title">Tier 1 — reporting, new fields, share + feedback buttons</div>
+    <div class="ms-body">Build the reporting feature with PDF download. Add front-end components for the three new fields. Set up analytics. Add share and feedback buttons. Coordinate with Eric and/or the dev team on backend integration. Submit PRs for review.</div>
+    <div class="ms-deliver">Deliverable: Reporting feature functional with PDF export. New fields in the UI. Share and feedback buttons live. Analytics installed.</div>
+  </div>
+  <div class="ms">
+    <div class="dot dot-amber"></div>
+    <div class="ms-header"><span class="ms-date">May 4–16</span> <span class="ms-tag ms-travel">travel — async only</span></div>
+    <div class="ms-title">Limited availability</div>
+    <div class="ms-body">Async communication only. Available for urgent issues. No active development.</div>
+  </div>
+  <div class="ms">
+    <div class="dot dot-green"></div>
+    <div class="ms-header"><span class="ms-date">May 17–Jun 1</span> <span class="ms-tag ms-pay">tier 2 complete</span></div>
+    <div class="ms-title">Tier 2 — polished reporting + view redesigns</div>
+    <div class="ms-body">Upgrade the reporting feature with better visuals and filtering. Redesign key views for clarity. Add refer-a-friend codes and session replay. Push all remaining PRs.</div>
+    <div class="ms-deliver">Deliverable: Reporting feature polished. Key views improved.</div>
+  </div>
+  <div class="ms">
+    <div class="dot"></div>
+    <div class="ms-header"><span class="ms-date">Jun 2–7</span></div>
+    <div class="ms-title">Final sprint — polish + tier 3 stretch goals</div>
+    <div class="ms-body">Incorporate any feedback from Eric and/or the dev team. Final bug fixes. If time allows, tackle tier 3 design improvements. Final QA before the event.</div>
+  </div>
+  <div class="ms">
+    <div class="dot dot-blue"></div>
+    <div class="ms-header"><span class="ms-date">Jun 8</span> <span class="ms-tag ms-launch">engage event</span></div>
+    <div class="ms-title">Launch</div>
+    <div class="ms-body">App live with all improvements. Monitor analytics during the event.</div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<h2 id="website">Website</h2>
+
+<div class="scope-items">
+  <p>A marketing website for Tack — designed to convert visitors from the Engage event into signups or waitlist entries. Three options depending on how much ownership you want over editing and maintenance going forward:</p>
+</div>
+
+<div class="tier">
+  <div class="tier-label">Option A — consulting <span class="tier-badge tier-must">$800</span></div>
+  <div class="tier-body">I weigh in on structure, messaging, positioning, and how the page should flow — including making sure the site is optimized for converting visitors into signups. Your team is responsible for the initial copy drafts, building and managing everything in your platform of choice, sourcing images, and formatting. I review and provide feedback throughout to keep it on track.</div>
+</div>
+
+<div class="tier">
+  <div class="tier-label">Option B — HTML build <span class="tier-badge tier-should">$3,000</span></div>
+  <div class="tier-body">I handle everything end to end — copy direction, design, and a fully HTML website. You get a polished, fast, custom site ready to go live. Future edits would require someone comfortable with code, or I can make changes as needed.</div>
+</div>
+
+<div class="tier">
+  <div class="tier-label">Option C — Wix build <span class="tier-badge tier-stretch">$5,500</span></div>
+  <div class="tier-body">Full website built in Wix so anyone on your team can edit it using the Wix editor — no code required. Includes copy direction, design, build, and setup. Your team can update text, images, and content independently going forward without any technical help.</div>
+</div>
+
+<div style="margin-top: 4px;">
+  <div class="ms">
+    <div class="dot dot-purple"></div>
+    <div class="ms-header"><span class="ms-date">Apr 23–May 3</span></div>
+    <div class="ms-title">Structure, messaging direction, and initial feedback</div>
+    <div class="ms-body">Define the page structure, messaging hierarchy, and positioning. Provide feedback on your team's initial drafts and build.</div>
+    <div class="ms-deliver">Deliverable: Website direction established. Feedback on first draft.</div>
+  </div>
+  <div class="ms">
+    <div class="dot dot-green"></div>
+    <div class="ms-header"><span class="ms-date">May 17–Jun 1</span> <span class="ms-tag ms-pay">website live</span></div>
+    <div class="ms-title">Final revisions + launch</div>
+    <div class="ms-body">Final feedback pass. Make sure the conversion flow works end to end. Live before the event.</div>
+    <div class="ms-deliver">Deliverable: Website live at tackco.com.</div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<h2 id="launch-advisory">Launch + product advisory</h2>
+<div class="h2-price">$10,000 · flat fee</div>
+
+<div class="scope-items">
+  <p>Launch support and product advisory from now through one month post-launch. I'll guide the strategy, help set up processes that work for your team, and provide ongoing feedback — your team drives the execution.</p>
+</div>
+
+<p style="font-size:16px; font-weight:500; margin-bottom: 12px;">What's included:</p>
+
+<div class="scope-items" style="margin-bottom: 8px;">
+  <p><strong style="font-weight:500; color:var(--text-primary);">Launch strategy</strong> — Help determine the right approach for the Engage event: direct signup, waitlist, or book-a-call. Guide the planning of the post-event follow-up sequence.</p>
+  <p><strong style="font-weight:500; color:var(--text-primary);">Talk prep</strong> — Guide the direction of the 15-minute keynote and 30-minute breakout session. Help with positioning, story arc, and making sure the product demo moment lands with a non-technical audience.</p>
+  <p><strong style="font-weight:500; color:var(--text-primary);">User research process</strong> — Help set up a system for learning from users: onboarding call scripts, what questions to ask, how to synthesize insights. Your team runs the calls — I help build the framework and review what comes back.</p>
+  <p><strong style="font-weight:500; color:var(--text-primary);">Product advisory</strong> — Calls as needed. Help think through whether the app is doing what it should. Prioritize features and changes based on what users actually need. Scope what's v1 vs what comes later.</p>
+  <p><strong style="font-weight:500; color:var(--text-primary);">Analytics + monitoring</strong> — Review session recordings to see where users get confused. Monitor for errors and bugs. Periodic reports: signups, active users, top issues, fixes shipped.</p>
+  <p><strong style="font-weight:500; color:var(--text-primary);">Post-launch support</strong> — One month of active support after the event. Help guide white-glove onboarding for first users. Guidance on iteration based on real feedback. Hot fixes within 24 hours for anything I'm responsible for.</p>
+</div>
+
+<div style="margin-top: 28px;">
+  <div class="ms">
+    <div class="dot dot-purple"></div>
+    <div class="ms-header"><span class="ms-date">Apr 23–May 3</span></div>
+    <div class="ms-title">Kickoff — product assessment + launch strategy</div>
+    <div class="ms-body">Deep dive into the product and target audience. Assess what needs to change before launch vs what can wait. Begin defining the launch approach. Start guiding talk direction.</div>
+  </div>
+  <div class="ms">
+    <div class="dot dot-amber"></div>
+    <div class="ms-header"><span class="ms-date">May 4–16</span> <span class="ms-tag ms-travel">travel — async only</span></div>
+    <div class="ms-title">Limited availability</div>
+    <div class="ms-body">Async communication. Monitoring remotely. Available for urgent decisions.</div>
+  </div>
+  <div class="ms">
+    <div class="dot dot-green"></div>
+    <div class="ms-header"><span class="ms-date">May 17–Jun 1</span> <span class="ms-tag ms-pay">launch-ready</span></div>
+    <div class="ms-title">Final launch prep</div>
+    <div class="ms-body">Finalize launch strategy. Final feedback on the talk. Help onboard beta testers and review how they use the app. Ensure all launch infrastructure is in place.</div>
+    <div class="ms-deliver">Deliverable: Launch strategy locked. Talk direction finalized. Beta feedback collected. Everything ready.</div>
+  </div>
+  <div class="ms">
+    <div class="dot"></div>
+    <div class="ms-header"><span class="ms-date">Jun 2–7</span></div>
+    <div class="ms-title">Final sprint</div>
+    <div class="ms-body">Last-minute adjustments to launch strategy. Confirm all systems are ready.</div>
+  </div>
+  <div class="ms">
+    <div class="dot dot-blue"></div>
+    <div class="ms-header"><span class="ms-date">Jun 8</span> <span class="ms-tag ms-launch">engage event</span></div>
+    <div class="ms-title">Launch day</div>
+    <div class="ms-body">Support during and after the event. Monitor analytics and errors. Hot fixes if needed.</div>
+  </div>
+  <div class="ms">
+    <div class="dot"></div>
+    <div class="ms-header"><span class="ms-date">Jun 9 – Jul 8</span> <span class="ms-tag ms-inc">included — 1 month post-launch</span></div>
+    <div class="ms-title">Post-launch support + iteration</div>
+    <div class="ms-body">Calls as needed. Analytics monitoring. Help guide onboarding for first users. Review user research findings and help prioritize changes. Guidance on quick UX wins. Review how users are actually using the app. Periodic reports on signups, active users, issues, and fixes. Help set up processes so the team can manage the feedback loop independently going forward.</div>
+    <div class="ms-deliver">Deliverable: A month of product support. By the end, a clear roadmap for what to build next based on real user data.</div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<h2 id="project-timeline">Project timeline</h2>
+
+<div class="scope-items">
+  <p>Timeline for UI improvements, website, and launch + product advisory. The full platform rebuild is a separate engagement that begins once this work is taken care of.</p>
+</div>
+
+<div style="margin-top: 4px;">
+  <div class="ms">
+    <div class="dot dot-purple"></div>
+    <div class="ms-header"><span class="ms-date">Apr 23–May 3</span></div>
+    <div class="ms-title">Sprint 1 — build + strategy + website direction</div>
+    <div class="ms-body">Tier 1 UI work: reporting feature with PDF download, new fields, share button, feedback button, analytics. Website: provide structure and messaging direction, review team's drafts. Launch: product assessment, launch strategy, talk direction. Coordinate with Eric and/or the dev team on backend work.</div>
+  </div>
+  <div class="ms">
+    <div class="dot dot-amber"></div>
+    <div class="ms-header"><span class="ms-date">May 4–16</span> <span class="ms-tag ms-travel">travel — async only</span></div>
+    <div class="ms-title">Japan — limited availability</div>
+    <div class="ms-body">Async communication only. Monitoring analytics remotely. Available for urgent issues and decisions. No active development.</div>
+  </div>
+  <div class="ms">
+    <div class="dot dot-green"></div>
+    <div class="ms-header"><span class="ms-date">May 17–Jun 1</span></div>
+    <div class="ms-title">Sprint 2 — polish + finalize</div>
+    <div class="ms-body">Tier 2 UI work: polished reporting, view redesigns, refer-a-friend codes, session replay. Website: final feedback pass, go live. Launch: finalize strategy, finalize talk direction, beta tester review, launch infrastructure confirmed.</div>
+  </div>
+  <div class="ms">
+    <div class="dot"></div>
+    <div class="ms-header"><span class="ms-date">Jun 2–7</span></div>
+    <div class="ms-title">Final sprint — last fixes before event</div>
+    <div class="ms-body">Final bug fixes and QA. Tier 3 stretch goals if time allows. Last-minute launch adjustments. Everything locked for June 8th.</div>
+  </div>
+  <div class="ms">
+    <div class="dot dot-blue"></div>
+    <div class="ms-header"><span class="ms-date">Jun 8</span> <span class="ms-tag ms-launch">engage event</span></div>
+    <div class="ms-title">Launch day</div>
+    <div class="ms-body">App live with improvements. Website live. Support during and after the event. Monitor analytics. Hot fixes if needed.</div>
+  </div>
+  <div class="ms">
+    <div class="dot"></div>
+    <div class="ms-header"><span class="ms-date">Jun 9 – Jul 8</span> <span class="ms-tag ms-inc">included — 1 month post-launch</span></div>
+    <div class="ms-title">Post-launch support</div>
+    <div class="ms-body">Calls as needed. Analytics monitoring. Help guide onboarding for first users. Review user research. Prioritize changes. Help the team manage feedback independently going forward.</div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<h2 id="full-rebuild">Full platform rebuild</h2>
+<div class="h2-price">$25,000 · milestone-based</div>
+
+<div class="rebuild-banner">This is a separate engagement — a complete redesign and rebuild of Tack on a modern, serverless stack. No hard deadline. Milestones are paid as delivered.</div>
+
+<div class="scope-items">
+  <p>A ground-up redesign and rebuild of the entire Tack platform. New information architecture, new UI, new tech stack. Everything learned from running the existing app — what works, what's confusing, what's missing — gets built into the new version from the start.</p>
+  <p>The new version runs on fully managed infrastructure at $59–104/month with no server maintenance. One codebase, one language, one deploy. No dev shop dependency.</p>
+  <p>Includes the complete reporting feature as the centerpiece — filters, drill-downs, historical averages, billable hours for both employee and client use cases, PDF/CSV export. Plus data migration from the existing app so users transition seamlessly.</p>
+</div>
+
+<div style="margin-top: 4px;">
+  <div class="ms">
+    <div class="dot dot-purple"></div>
+    <div class="ms-header"><span class="ms-date">Week 1</span> <span class="ms-tag ms-pay">$5,000 — deposit</span></div>
+    <div class="ms-title">Design + foundation</div>
+    <div class="ms-body">Finalize the full product redesign — every screen, every flow, every interaction. Set up the tech stack, database, authentication with multi-tenant org support, and payment subscriptions. Analytics and error tracking from day one.</div>
+    <div class="ms-deliver">Milestone: Approved designs. Sign up, pick a plan, pay, land in the app.</div>
+  </div>
+  <div class="ms">
+    <div class="dot dot-green"></div>
+    <div class="ms-header"><span class="ms-date">Week 2</span> <span class="ms-tag ms-pay">$5,000 — core working</span></div>
+    <div class="ms-title">Frameworks + time tracking</div>
+    <div class="ms-body">Full framework system — On the Business and In the Business hierarchy. Framework editor with default templates per planner type. Real-time timer, manual time entry, search with prefix matching, time adjustments, timezone support.</div>
+    <div class="ms-deliver">Milestone: Core product works end to end.</div>
+  </div>
+  <div class="ms">
+    <div class="dot dot-green"></div>
+    <div class="ms-header"><span class="ms-date">Week 3</span> <span class="ms-tag ms-pay">$5,000 — clients + reporting</span></div>
+    <div class="ms-title">Clients + dashboard + reporting</div>
+    <div class="ms-body">Client management — individual, partner, company — with client-specific frameworks. Dashboard with timesheet, hours graph, busiest month, billable hours. Full reporting feature: filter by time period, team member, client, project. Summary and detail views. Billable hours for employee payment and client invoicing. Historical averages with chart comparisons. Drill-down by framework hierarchy. Customizable sections. PDF/CSV export.</div>
+    <div class="ms-deliver">Milestone: Client workflow, dashboard, and the complete reporting feature.</div>
+  </div>
+  <div class="ms">
+    <div class="dot dot-green"></div>
+    <div class="ms-header"><span class="ms-date">Week 4</span> <span class="ms-tag ms-pay">$5,000 — feature complete</span></div>
+    <div class="ms-title">Team, settings, integrations, polish</div>
+    <div class="ms-body">Team invites and multi-company switching. Account settings — timezone, company details, billing. Admin route for platform oversight. Email integration for invites, password resets, and notifications. Maps integration. Full QA pass. UI polish and mobile responsiveness.</div>
+    <div class="ms-deliver">Milestone: Every feature working. App matches the approved designs.</div>
+  </div>
+  <div class="ms">
+    <div class="dot dot-blue"></div>
+    <div class="ms-header"><span class="ms-date">Week 5</span> <span class="ms-tag ms-pay">$5,000 — live + migrated</span></div>
+    <div class="ms-title">Deploy + data migration</div>
+    <div class="ms-body">Production deploy. Domain and DNS. End-to-end payment testing. Migrate user data from the existing app — seamless transition with minimal downtime. Final testing on production. Old infrastructure can be decommissioned.</div>
+    <div class="ms-deliver">Milestone: New app live. Users migrated. Done.</div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<h2 id="summary" style="margin-top:0;">Summary</h2>
+
+<div style="border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 28px 28px 24px; margin-bottom: 20px;">
+
+  <div style="margin-bottom: 24px;">
+    <div style="font-size: 16px; font-weight: 500; margin-bottom: 12px;">UI improvements</div>
+    <label style="display: flex; align-items: center; gap: 10px; padding: 10px 0; cursor: pointer; font-size: 15px; color: var(--text-secondary); border-bottom: 0.5px solid var(--border);">
+      <input type="radio" name="ui" value="3000" style="width: 18px; height: 18px; accent-color: var(--green-text);"> Tier 1 — must ship <span style="margin-left: auto; font-family: var(--mono); color: var(--text-primary);">$3,000</span>
+    </label>
+    <label style="display: flex; align-items: center; gap: 10px; padding: 10px 0; cursor: pointer; font-size: 15px; color: var(--text-secondary); border-bottom: 0.5px solid var(--border);">
+      <input type="radio" name="ui" value="5000" style="width: 18px; height: 18px; accent-color: var(--blue-text);"> Tier 2 — should ship <span style="margin-left: auto; font-family: var(--mono); color: var(--text-primary);">$5,000</span>
+    </label>
+    <label style="display: flex; align-items: center; gap: 10px; padding: 10px 0; cursor: pointer; font-size: 15px; color: var(--text-secondary);">
+      <input type="radio" name="ui" value="8000" style="width: 18px; height: 18px; accent-color: var(--purple-text);"> Tier 3 — stretch <span style="margin-left: auto; font-family: var(--mono); color: var(--text-primary);">$8,000</span>
+    </label>
+  </div>
+
+  <div style="margin-bottom: 24px;">
+    <div style="font-size: 16px; font-weight: 500; margin-bottom: 12px;">Website</div>
+    <label style="display: flex; align-items: center; gap: 10px; padding: 10px 0; cursor: pointer; font-size: 15px; color: var(--text-secondary); border-bottom: 0.5px solid var(--border);">
+      <input type="radio" name="web" value="800" style="width: 18px; height: 18px;"> Option A — consulting <span style="margin-left: auto; font-family: var(--mono); color: var(--text-primary);">$800</span>
+    </label>
+    <label style="display: flex; align-items: center; gap: 10px; padding: 10px 0; cursor: pointer; font-size: 15px; color: var(--text-secondary); border-bottom: 0.5px solid var(--border);">
+      <input type="radio" name="web" value="3000" style="width: 18px; height: 18px;"> Option B — HTML build <span style="margin-left: auto; font-family: var(--mono); color: var(--text-primary);">$3,000</span>
+    </label>
+    <label style="display: flex; align-items: center; gap: 10px; padding: 10px 0; cursor: pointer; font-size: 15px; color: var(--text-secondary);">
+      <input type="radio" name="web" value="5500" style="width: 18px; height: 18px;"> Option C — Wix build <span style="margin-left: auto; font-family: var(--mono); color: var(--text-primary);">$5,500</span>
+    </label>
+  </div>
+
+  <div style="margin-bottom: 24px;">
+    <div style="font-size: 16px; font-weight: 500; margin-bottom: 12px;">Launch + product advisory</div>
+    <label style="display: flex; align-items: center; gap: 10px; padding: 10px 0; cursor: pointer; font-size: 15px; color: var(--text-secondary);">
+      <input type="checkbox" id="launch" value="10000" style="width: 18px; height: 18px;"> Strategy through 1 month post-launch <span style="margin-left: auto; font-family: var(--mono); color: var(--text-primary);">$10,000</span>
+    </label>
+  </div>
+
+  <div style="margin-bottom: 24px;">
+    <div style="font-size: 16px; font-weight: 500; margin-bottom: 12px;">Full platform rebuild</div>
+    <label style="display: flex; align-items: center; gap: 10px; padding: 10px 0; cursor: pointer; font-size: 15px; color: var(--text-secondary);">
+      <input type="checkbox" id="rebuild" value="25000" style="width: 18px; height: 18px;"> Separate engagement · milestone-based <span style="margin-left: auto; font-family: var(--mono); color: var(--text-primary);">$25,000</span>
+    </label>
+  </div>
+
+  <div style="border-top: 1px solid var(--border); padding-top: 20px; display: flex; justify-content: space-between; align-items: baseline;">
+    <div style="font-size: 16px; color: var(--text-secondary);">Total</div>
+    <div id="calcTotal" style="font-size: 32px; font-weight: 600; font-family: var(--mono);">$0</div>
+  </div>
+
+</div>
+
+<div class="summary-grid" style="margin-top: 14px;">
+  <div class="scard">
+    <div class="scard-label">Project dates</div>
+    <div class="scard-val" style="font-size:18px;">Apr 23 – Jul 8</div>
+    <div class="scard-sub">Pre-launch through 1 month post-launch</div>
+  </div>
+  <div class="scard">
+    <div class="scard-label">Event</div>
+    <div class="scard-val" style="font-size:18px;">June 8th</div>
+    <div class="scard-sub">Engage event launch</div>
+  </div>
+</div>
+
+<div class="note-box" style="margin-top: 16px;">
+  <strong>Payment structure:</strong> UI improvements are priced by tier. Website pricing depends on option chosen. Launch + product advisory is a flat fee covering everything through one month post-launch. The full rebuild is milestone-based — five payments of $5,000, each tied to a deliverable you can see, test, and approve. No payment moves forward until the milestone is met.
+  <br><br>
+  <strong>How we work:</strong> We talk when we need to — no fixed call schedule, no counting minutes. The flat-fee structure means we can focus on getting the work done instead of watching the clock.
+  <br><br>
+  <strong>After the engagement:</strong> If you'd like continued product advisory and development beyond the included post-launch month, we can discuss a monthly retainer based on the roadmap we'll have built together from real user data.
+</div>
+
+</div>
+
+<script>
+const toc = document.getElementById('toc');
+const links = toc.querySelectorAll('a');
+const sections = document.querySelectorAll('h2[id]');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const active = toc.querySelector('a[href="#' + entry.target.id + '"]');
+      if (active) active.classList.add('active');
+    }
+  });
+}, { rootMargin: '-10% 0px -60% 0px' });
+sections.forEach(s => observer.observe(s));
+window.addEventListener('scroll', () => {
+  if ((window.innerHeight + window.scrollY) >= document.body.scrollHeight - 50) {
+    links.forEach(l => l.classList.remove('active'));
+    const last = toc.querySelector('a:last-child');
+    if (last) last.classList.add('active');
+  }
+});
+
+function updateTotal() {
+  var total = 0;
+  var uiSelected = document.querySelector('input[name="ui"]:checked');
+  if (uiSelected) total += parseInt(uiSelected.value);
+  var webSelected = document.querySelector('input[name="web"]:checked');
+  if (webSelected) total += parseInt(webSelected.value);
+  if (document.getElementById('launch').checked) total += 10000;
+  if (document.getElementById('rebuild').checked) total += 25000;
+  document.getElementById('calcTotal').textContent = '$' + total.toLocaleString();
+}
+
+document.querySelectorAll('input[name="ui"], input[name="web"], #launch, #rebuild').forEach(function(el) {
+  el.addEventListener('change', updateTotal);
+});
+</script>
+</body>
+</html>
