@@ -191,7 +191,7 @@ if (document.readyState === "loading") {
   bootstrap();
 }
 
-// Handle back-navigation from /ditto/ via bfcache: reset scroll and refresh
+// Handle back-navigation from /pasta/ via bfcache: reset scroll and refresh
 // ScrollTrigger so the hero pin/visibility state doesn't stay stuck.
 window.addEventListener("pageshow", (event) => {
   if (!event.persisted) return;
