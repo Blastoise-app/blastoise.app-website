@@ -1,34 +1,14 @@
-const HERO_FRAME_COUNT = 90;
 const HERO_INTRO_DURATION = 4;
 const HERO_INTRO_DELAY = 0.4;
 
-function pickHeroProfile() {
-  return window.innerWidth < window.innerHeight ? "mobile" : "desktop";
-}
+// Zoom geometry — must match scripts/generate-hero-frames.js, which
+// documents the original frame-based version of this animation.
+const HERO_TARGET_X = 0.3765;
+const HERO_TARGET_Y = 0.408;
+const HERO_FINAL_SCALE = 90;
+const HERO_BG = "#2d0000";
 
-function preloadHeroFrames(profile) {
-  const loads = [];
-  const images = [];
-  for (let i = 0; i < HERO_FRAME_COUNT; i++) {
-    const img = new Image();
-    const n = String(i).padStart(3, "0");
-    img.src = `assets/images/hero-sequence/${profile}/frame-${n}.webp`;
-    images.push(img);
-    loads.push(
-      new Promise((resolve) => {
-        if (img.complete && img.naturalWidth > 0) return resolve(img);
-        img.onload = () => resolve(img);
-        img.onerror = () => resolve(null);
-      })
-    );
-  }
-  return Promise.all(loads).then((results) => {
-    const ok = results.every((r) => r !== null);
-    return { ok, images };
-  });
-}
-
-// The hero intro plays once on load: the frame sequence zooms into the shell,
+// The hero intro plays once on load: the camera zooms into the shell,
 // then the hero fades away to reveal the site content underneath.
 let heroIntroDone = false;
 function finishHeroIntro() {
@@ -65,43 +45,106 @@ function finishHeroIntro() {
   if (playEntryReveal) playEntryReveal();
 }
 
-function initBlastoiseHero(frames) {
+// Render the zoom directly from the high-res source image at a continuous
+// scale every frame, instead of stepping through pre-rendered stills —
+// this is what keeps the shell edges perfectly steady.
+function initBlastoiseHero() {
   const heroImg = document.querySelector("#hero-blastoise");
   const heroSection = document.querySelector("#section-hero");
   if (!heroImg || !heroSection || heroIntroDone) return;
 
-  const wrapper = heroImg.parentElement;
-
-  // Replace the img with a canvas, same layout box
   const canvas = document.createElement("canvas");
   canvas.id = "hero-blastoise-canvas";
-  canvas.width = frames[0].naturalWidth;
-  canvas.height = frames[0].naturalHeight;
-  wrapper.appendChild(canvas);
-  heroImg.style.display = "none";
+  heroImg.parentElement.appendChild(canvas);
 
   const ctx = canvas.getContext("2d", { alpha: false });
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
-
-  // Crossfade between adjacent frames so the zoom reads as continuous
-  // motion instead of stepping through the 90 discrete frames.
-  let lastF = -1;
-  function drawProgress(p) {
-    const f = Math.max(0, Math.min(1, p)) * (HERO_FRAME_COUNT - 1);
-    if (lastF !== -1 && Math.abs(f - lastF) < 0.001) return;
-    lastF = f;
-    const i = Math.floor(f);
-    const frac = f - i;
-    ctx.globalAlpha = 1;
-    ctx.drawImage(frames[i], 0, 0, canvas.width, canvas.height);
-    if (frac > 0 && i + 1 < HERO_FRAME_COUNT) {
-      ctx.globalAlpha = frac;
-      ctx.drawImage(frames[i + 1], 0, 0, canvas.width, canvas.height);
-      ctx.globalAlpha = 1;
-    }
+  if (!ctx) {
+    canvas.remove();
+    finishHeroIntro();
+    return;
   }
-  drawProgress(0);
+
+  const IW = heroImg.naturalWidth;
+  const IH = heroImg.naturalHeight;
+
+  // Layout mirrors the img's object-fit: contain + object-position CSS
+  // so the canvas takeover at progress 0 is pixel-identical.
+  let frameW, frameH, displayedWidth, displayedHeight;
+  let targetDisplayX, targetDisplayY, imageOffsetX, imageOffsetY;
+  function layout() {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    frameW = Math.round(heroSection.clientWidth * dpr);
+    frameH = Math.round(heroSection.clientHeight * dpr);
+    canvas.width = frameW;
+    canvas.height = frameH;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+
+    const narrow = window.matchMedia("(max-width: 640px)").matches;
+    const opX = narrow ? 0.5 : 0.55;
+    const opY = narrow ? 0.5 : 0.45;
+
+    const frameAspect = frameW / frameH;
+    const imageAspect = IW / IH;
+    if (frameAspect > imageAspect) {
+      displayedHeight = frameH;
+      displayedWidth = frameH * imageAspect;
+    } else {
+      displayedWidth = frameW;
+      displayedHeight = frameW / imageAspect;
+    }
+    imageOffsetX = (frameW - displayedWidth) * opX;
+    imageOffsetY = (frameH - displayedHeight) * opY;
+    targetDisplayX = imageOffsetX + displayedWidth * HERO_TARGET_X;
+    targetDisplayY = imageOffsetY + displayedHeight * HERO_TARGET_Y;
+  }
+
+  let lastEased = 0;
+  function render(eased) {
+    lastEased = eased;
+    const scale = 1 + (HERO_FINAL_SCALE - 1) * eased;
+    const tx = eased * (frameW / 2 - targetDisplayX);
+    const ty = eased * (frameH / 2 - targetDisplayY);
+    const imgLeft = targetDisplayX + scale * (imageOffsetX - targetDisplayX) + tx;
+    const imgTop = targetDisplayY + scale * (imageOffsetY - targetDisplayY) + ty;
+    const imgW = scale * displayedWidth;
+    const imgH = scale * displayedHeight;
+
+    ctx.fillStyle = HERO_BG;
+    ctx.fillRect(0, 0, frameW, frameH);
+
+    const visLeft = Math.max(0, imgLeft);
+    const visTop = Math.max(0, imgTop);
+    const visRight = Math.min(frameW, imgLeft + imgW);
+    const visBottom = Math.min(frameH, imgTop + imgH);
+    if (visRight <= visLeft || visBottom <= visTop) return;
+
+    ctx.drawImage(
+      heroImg,
+      ((visLeft - imgLeft) / imgW) * IW,
+      ((visTop - imgTop) / imgH) * IH,
+      ((visRight - visLeft) / imgW) * IW,
+      ((visBottom - visTop) / imgH) * IH,
+      visLeft,
+      visTop,
+      visRight - visLeft,
+      visBottom - visTop
+    );
+  }
+
+  layout();
+  render(0);
+  heroImg.style.display = "none";
+
+  window.addEventListener(
+    "resize",
+    () => {
+      if (heroIntroDone) return;
+      layout();
+      render(lastEased);
+    },
+    { passive: true }
+  );
 
   const heroTitleOverlay = document.querySelector("#hero-title-overlay");
   if (heroTitleOverlay) {
@@ -113,9 +156,11 @@ function initBlastoiseHero(frames) {
     p: 1,
     duration: HERO_INTRO_DURATION,
     delay: HERO_INTRO_DELAY,
-    ease: "sine.inOut",
+    ease: "power1.inOut",
     onUpdate: () => {
-      drawProgress(intro.p);
+      // Exponential scale growth reads as a constant zoom speed.
+      const scale = Math.pow(HERO_FINAL_SCALE, intro.p);
+      render((scale - 1) / (HERO_FINAL_SCALE - 1));
       if (heroTitleOverlay) {
         const fadeStart = 0.72;
         heroTitleOverlay.style.opacity =
@@ -192,18 +237,28 @@ function init() {
     return;
   }
 
-  // If frames stall on a slow connection, don't leave the site stuck behind the hero.
+  // If the image stalls on a slow connection, don't leave the site stuck
+  // behind the hero. Note: img.decode() rejects in Chromium for images
+  // this large, so wait on load state instead.
   const safetyTimer = setTimeout(finishHeroIntro, 8000);
-  preloadHeroFrames(pickHeroProfile()).then(({ ok, images }) => {
-    clearTimeout(safetyTimer);
-    if (heroIntroDone) return;
-    if (!ok) {
-      console.warn("Hero frame sequence failed to load; skipping intro animation.");
-      finishHeroIntro();
-      return;
-    }
-    initBlastoiseHero(images);
+  const heroImg = document.querySelector("#hero-blastoise");
+  const ready = new Promise((resolve, reject) => {
+    if (!heroImg) return reject();
+    if (heroImg.complete && heroImg.naturalWidth > 0) return resolve();
+    if (heroImg.complete) return reject();
+    heroImg.addEventListener("load", resolve, { once: true });
+    heroImg.addEventListener("error", reject, { once: true });
   });
+  ready
+    .then(() => {
+      clearTimeout(safetyTimer);
+      if (!heroIntroDone) initBlastoiseHero();
+    })
+    .catch(() => {
+      clearTimeout(safetyTimer);
+      console.warn("Hero image failed to load; skipping intro animation.");
+      finishHeroIntro();
+    });
 }
 
 if ("scrollRestoration" in history) {
