@@ -11,9 +11,16 @@ const HERO_BG = "#2d0000";
 // The hero intro plays once on load: the camera zooms into the shell,
 // then the hero fades away to reveal the site content underneath.
 let heroIntroDone = false;
+let heroIntroTween = null;
+let heroSource = null;
 function finishHeroIntro() {
   if (heroIntroDone) return;
   heroIntroDone = true;
+
+  if (heroIntroTween) {
+    heroIntroTween.kill();
+    heroIntroTween = null;
+  }
 
   const heroSection = document.querySelector("#section-hero");
   const heroTitleOverlay = document.querySelector("#hero-title-overlay");
@@ -36,6 +43,8 @@ function finishHeroIntro() {
       ease: "power2.out",
       onComplete: () => {
         heroSection.style.visibility = "hidden";
+        if (heroSource && heroSource.close) heroSource.close();
+        heroSource = null;
       },
     });
   }
@@ -45,10 +54,29 @@ function finishHeroIntro() {
   if (playEntryReveal) playEntryReveal();
 }
 
-// Render the zoom directly from the high-res source image at a continuous
-// scale every frame, instead of stepping through pre-rendered stills —
-// this is what keeps the shell edges perfectly steady.
-function initBlastoiseHero() {
+// Downscale the 10340x10800 source once into a bitmap sized for the
+// device: full resolution is ~450MB decoded and exceeds many mobile GPUs'
+// max texture size, which forces slow tiled rendering. Phones keep the
+// zoom sharp well past the point where the art is flat color anyway.
+function prepareHeroSource(heroImg) {
+  const cap = window.matchMedia("(max-width: 640px)").matches ? 4096 : 8192;
+  const IW = heroImg.naturalWidth;
+  const IH = heroImg.naturalHeight;
+  const ratio = cap / Math.max(IW, IH);
+  if (ratio >= 1 || typeof createImageBitmap === "undefined") {
+    return Promise.resolve(heroImg);
+  }
+  return createImageBitmap(heroImg, {
+    resizeWidth: Math.round(IW * ratio),
+    resizeHeight: Math.round(IH * ratio),
+    resizeQuality: "high",
+  }).catch(() => heroImg);
+}
+
+// Render the zoom directly from the source bitmap at a continuous scale
+// every frame, instead of stepping through pre-rendered stills — this is
+// what keeps the shell edges perfectly steady.
+function initBlastoiseHero(source) {
   const heroImg = document.querySelector("#hero-blastoise");
   const heroSection = document.querySelector("#section-hero");
   if (!heroImg || !heroSection || heroIntroDone) return;
@@ -64,8 +92,8 @@ function initBlastoiseHero() {
     return;
   }
 
-  const IW = heroImg.naturalWidth;
-  const IH = heroImg.naturalHeight;
+  const IW = source.width || source.naturalWidth;
+  const IH = source.height || source.naturalHeight;
 
   // Layout mirrors the img's object-fit: contain + object-position CSS
   // so the canvas takeover at progress 0 is pixel-identical.
@@ -120,7 +148,7 @@ function initBlastoiseHero() {
     if (visRight <= visLeft || visBottom <= visTop) return;
 
     ctx.drawImage(
-      heroImg,
+      source,
       ((visLeft - imgLeft) / imgW) * IW,
       ((visTop - imgTop) / imgH) * IH,
       ((visRight - visLeft) / imgW) * IW,
@@ -152,7 +180,7 @@ function initBlastoiseHero() {
   }
 
   const intro = { p: 0 };
-  gsap.to(intro, {
+  heroIntroTween = gsap.to(intro, {
     p: 1,
     duration: HERO_INTRO_DURATION,
     delay: HERO_INTRO_DELAY,
@@ -250,9 +278,15 @@ function init() {
     heroImg.addEventListener("error", reject, { once: true });
   });
   ready
-    .then(() => {
+    .then(() => prepareHeroSource(heroImg))
+    .then((source) => {
       clearTimeout(safetyTimer);
-      if (!heroIntroDone) initBlastoiseHero();
+      if (heroIntroDone) {
+        if (source && source.close) source.close();
+        return;
+      }
+      heroSource = source;
+      initBlastoiseHero(source);
     })
     .catch(() => {
       clearTimeout(safetyTimer);
