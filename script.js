@@ -1,4 +1,6 @@
 const HERO_FRAME_COUNT = 90;
+const HERO_INTRO_DURATION = 3.2;
+const HERO_INTRO_DELAY = 0.4;
 
 function pickHeroProfile() {
   return window.innerWidth < window.innerHeight ? "mobile" : "desktop";
@@ -26,10 +28,47 @@ function preloadHeroFrames(profile) {
   });
 }
 
+// The hero intro plays once on load: the frame sequence zooms into the shell,
+// then the hero fades away to reveal the site content underneath.
+let heroIntroDone = false;
+function finishHeroIntro() {
+  if (heroIntroDone) return;
+  heroIntroDone = true;
+
+  const heroSection = document.querySelector("#section-hero");
+  const heroTitleOverlay = document.querySelector("#hero-title-overlay");
+
+  if (heroTitleOverlay) {
+    gsap.to(heroTitleOverlay, {
+      opacity: 0,
+      duration: 0.3,
+      overwrite: true,
+      onComplete: () => {
+        heroTitleOverlay.style.visibility = "hidden";
+      },
+    });
+  }
+
+  if (heroSection) {
+    gsap.to(heroSection, {
+      opacity: 0,
+      duration: 0.8,
+      ease: "power2.out",
+      onComplete: () => {
+        heroSection.style.visibility = "hidden";
+      },
+    });
+  }
+
+  document.body.classList.remove("hero-locked");
+  if (lenis) lenis.start();
+  if (playEntryReveal) playEntryReveal();
+}
+
 function initBlastoiseHero(frames) {
   const heroImg = document.querySelector("#hero-blastoise");
   const heroSection = document.querySelector("#section-hero");
-  if (!heroImg || !heroSection) return;
+  if (!heroImg || !heroSection || heroIntroDone) return;
 
   const wrapper = heroImg.parentElement;
 
@@ -55,72 +94,44 @@ function initBlastoiseHero(frames) {
   drawFrame(0);
 
   const heroTitleOverlay = document.querySelector("#hero-title-overlay");
-  const setHeroHidden = (hidden) => {
-    heroSection.style.opacity = hidden ? "0" : "1";
-    heroSection.style.visibility = hidden ? "hidden" : "visible";
-  };
   if (heroTitleOverlay) {
     gsap.set(heroTitleOverlay, { opacity: 1 });
   }
 
-  ScrollTrigger.create({
-    trigger: heroSection,
-    start: "top top",
-    end: () => `+=${window.innerHeight * (window.innerWidth <= 640 ? 1.1 : 1.2)}`,
-    scrub: 0.1,
-    pin: true,
-    anticipatePin: 1,
-    invalidateOnRefresh: true,
-    onUpdate: function (self) {
-      const p = Math.max(0, Math.min(1, self.progress || 0));
-      drawFrame(Math.round(p * (HERO_FRAME_COUNT - 1)));
+  const intro = { p: 0 };
+  gsap.to(intro, {
+    p: 1,
+    duration: HERO_INTRO_DURATION,
+    delay: HERO_INTRO_DELAY,
+    ease: "power1.inOut",
+    onUpdate: () => {
+      drawFrame(Math.round(intro.p * (HERO_FRAME_COUNT - 1)));
       if (heroTitleOverlay) {
         const fadeStart = 0.72;
-        const titleOpacity = p <= fadeStart ? 1 : Math.max(0, 1 - (p - fadeStart) / (1 - fadeStart));
-        heroTitleOverlay.style.opacity = titleOpacity;
+        heroTitleOverlay.style.opacity =
+          intro.p <= fadeStart ? 1 : Math.max(0, 1 - (intro.p - fadeStart) / (1 - fadeStart));
       }
     },
-    onLeave: function () {
-      setHeroHidden(true);
-      if (playEntryReveal) playEntryReveal();
-    },
-    onEnterBack: function () {
-      setHeroHidden(false);
-      if (resetEntryReveal) resetEntryReveal();
-    },
+    onComplete: finishHeroIntro,
   });
-
-  ScrollTrigger.refresh();
 }
 
-// Entry section: fade in on hero onLeave, no scroll locking.
+// Entry section: fades in once the hero intro finishes.
 let playEntryReveal = null;
 let entryRevealDone = false;
-let resetEntryReveal = null;
 function initEntryReveal() {
   const introEl = document.querySelector("#entry-intro");
-  const appsByBlastoiseEl = document.querySelector("#entry-apps-by-blastoise");
-  const introDividerEl = document.querySelector("#entry-intro-divider");
   const appsEl = document.querySelector("#entry-apps");
-  const entrySection = document.querySelector("#section-entry");
 
-  if (!introEl || !appsByBlastoiseEl || !introDividerEl || !appsEl || !entrySection) {
+  if (!introEl || !appsEl) {
     return;
   }
 
   gsap.set([introEl, appsEl], { opacity: 0, overwrite: true });
 
-  resetEntryReveal = () => {
-    entryRevealDone = false;
-    gsap.killTweensOf([introEl, appsEl]);
-    gsap.set([introEl, appsEl], { opacity: 0, overwrite: true });
-  };
-
   playEntryReveal = () => {
     if (entryRevealDone) return;
     entryRevealDone = true;
-
-    gsap.set([introEl, appsEl], { opacity: 0, overwrite: true });
 
     gsap.to(introEl, {
       opacity: 1,
@@ -148,15 +159,16 @@ function initSmoothScroll() {
     smoothWheel: true,
     smoothTouch: false,
   });
-  lenis.on("scroll", ScrollTrigger.update);
   gsap.ticker.add((time) => lenis.raf(time * 1000));
-  gsap.ticker.lagSmoothing(0);
 }
 
 function init() {
-  gsap.registerPlugin(ScrollTrigger);
   window.scrollTo(0, 0);
   initSmoothScroll();
+
+  // Lock scrolling while the intro plays; finishHeroIntro unlocks it.
+  document.body.classList.add("hero-locked");
+  if (lenis) lenis.stop();
 
   const heroTitleOverlay = document.querySelector("#hero-title-overlay");
   if (heroTitleOverlay) {
@@ -165,9 +177,19 @@ function init() {
 
   initEntryReveal();
 
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    finishHeroIntro();
+    return;
+  }
+
+  // If frames stall on a slow connection, don't leave the site stuck behind the hero.
+  const safetyTimer = setTimeout(finishHeroIntro, 8000);
   preloadHeroFrames(pickHeroProfile()).then(({ ok, images }) => {
+    clearTimeout(safetyTimer);
+    if (heroIntroDone) return;
     if (!ok) {
-      console.warn("Hero frame sequence failed to load; hero image will stay static.");
+      console.warn("Hero frame sequence failed to load; skipping intro animation.");
+      finishHeroIntro();
       return;
     }
     initBlastoiseHero(images);
@@ -191,17 +213,20 @@ if (document.readyState === "loading") {
   bootstrap();
 }
 
-// Handle back-navigation from /pasta/ via bfcache: reset scroll and refresh
-// ScrollTrigger so the hero pin/visibility state doesn't stay stuck.
+// Handle back-navigation from /pasta/ via bfcache: the intro has already
+// played, so make sure the hero stays hidden and the content is visible.
 window.addEventListener("pageshow", (event) => {
   if (!event.persisted) return;
   window.scrollTo(0, 0);
-  entryRevealDone = false;
+  if (!heroIntroDone) return;
   const heroSection = document.querySelector("#section-hero");
   if (heroSection) {
-    heroSection.style.opacity = "1";
-    heroSection.style.visibility = "visible";
+    heroSection.style.opacity = "0";
+    heroSection.style.visibility = "hidden";
   }
-  if (resetEntryReveal) resetEntryReveal();
-  if (window.ScrollTrigger) ScrollTrigger.refresh(true);
+  const heroTitleOverlay = document.querySelector("#hero-title-overlay");
+  if (heroTitleOverlay) {
+    heroTitleOverlay.style.opacity = "0";
+    heroTitleOverlay.style.visibility = "hidden";
+  }
 });

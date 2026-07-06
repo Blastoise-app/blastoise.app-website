@@ -26,12 +26,25 @@ html,body{
     height: 100vh;
     height: 100dvh;
     width: 100vw;
-    position: relative;
+    position: fixed;
+    top: 0;
+    left: 0;
     overflow: hidden;
     background-color: #2d0000;
     z-index: 30;
     pointer-events: none;
     contain: paint;
+}
+
+/* Applied while the load-time hero intro plays; removed when it finishes. */
+body.hero-locked{
+    overflow: hidden;
+    height: 100vh;
+    height: 100dvh;
+}
+
+body.hero-locked #main{
+    pointer-events: none;
 }
 
 .hero-blastoise-container{
