@@ -1,5 +1,5 @@
 const HERO_FRAME_COUNT = 90;
-const HERO_INTRO_DURATION = 3.2;
+const HERO_INTRO_DURATION = 4;
 const HERO_INTRO_DELAY = 0.4;
 
 function pickHeroProfile() {
@@ -84,14 +84,24 @@ function initBlastoiseHero(frames) {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
-  let currentFrame = -1;
-  function drawFrame(idx) {
-    const i = Math.max(0, Math.min(HERO_FRAME_COUNT - 1, idx));
-    if (i === currentFrame) return;
-    currentFrame = i;
+  // Crossfade between adjacent frames so the zoom reads as continuous
+  // motion instead of stepping through the 90 discrete frames.
+  let lastF = -1;
+  function drawProgress(p) {
+    const f = Math.max(0, Math.min(1, p)) * (HERO_FRAME_COUNT - 1);
+    if (lastF !== -1 && Math.abs(f - lastF) < 0.001) return;
+    lastF = f;
+    const i = Math.floor(f);
+    const frac = f - i;
+    ctx.globalAlpha = 1;
     ctx.drawImage(frames[i], 0, 0, canvas.width, canvas.height);
+    if (frac > 0 && i + 1 < HERO_FRAME_COUNT) {
+      ctx.globalAlpha = frac;
+      ctx.drawImage(frames[i + 1], 0, 0, canvas.width, canvas.height);
+      ctx.globalAlpha = 1;
+    }
   }
-  drawFrame(0);
+  drawProgress(0);
 
   const heroTitleOverlay = document.querySelector("#hero-title-overlay");
   if (heroTitleOverlay) {
@@ -103,9 +113,9 @@ function initBlastoiseHero(frames) {
     p: 1,
     duration: HERO_INTRO_DURATION,
     delay: HERO_INTRO_DELAY,
-    ease: "power1.inOut",
+    ease: "sine.inOut",
     onUpdate: () => {
-      drawFrame(Math.round(intro.p * (HERO_FRAME_COUNT - 1)));
+      drawProgress(intro.p);
       if (heroTitleOverlay) {
         const fadeStart = 0.72;
         heroTitleOverlay.style.opacity =

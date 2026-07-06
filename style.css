@@ -170,7 +170,7 @@ body.hero-locked #main{
     height: auto;
     max-width: 800px;
     margin: 0 auto;
-    padding: 28vh 5vw 8vh;
+    padding: 10vh 5vw 8vh;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
