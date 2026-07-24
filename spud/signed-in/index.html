@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Signed in — Spud</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --text: #1a1a1a;
+  --text-secondary: #6b6b6b;
+  --accent: #0f6e56;
+  --accent-bg: #e6f5ec;
+  --border: rgba(0,0,0,0.1);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1a1a;
+    --text: #ffffff;
+    --text-secondary: #c0c0bc;
+    --accent: #5dcaa5;
+    --accent-bg: #0a2e1f;
+    --border: rgba(255,255,255,0.12);
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, system-ui, 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+}
+main { max-width: 380px; }
+.badge {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 28px;
+  line-height: 56px;
+  margin: 0 auto 20px;
+}
+h1 { font-size: 22px; font-weight: 600; margin-bottom: 8px; }
+p { font-size: 15px; color: var(--text-secondary); line-height: 1.5; }
+a.open {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 10px 22px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--bg);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+}
+</style>
+</head>
+<body>
+<main>
+  <div class="badge" id="badge">✓</div>
+  <h1 id="headline">You’re signed in</h1>
+  <p id="detail">Heading back to Spud… you can close this tab.</p>
+  <a class="open" id="open" href="spud://auth-callback">Open Spud</a>
+</main>
+<script>
+  // Relay Supabase's query string (?code=… or ?error=…) to the app's
+  // deep link; the button is the fallback if the browser blocks the
+  // automatic redirect.
+  var target = 'spud://auth-callback' + window.location.search;
+  document.getElementById('open').href = target;
+  var params = new URLSearchParams(window.location.search);
+  if (params.has('error') || params.has('error_description')) {
+    document.getElementById('badge').textContent = '!';
+    document.getElementById('headline').textContent = 'Sign-in didn’t finish';
+    document.getElementById('detail').textContent =
+      'Head back to Spud to try again.';
+  }
+  window.location.href = target;
+</script>
+</body>
+</html>
